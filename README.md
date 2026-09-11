@@ -16,10 +16,11 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 1 (in progress)** — native block scanner for heading / paragraph /
-list / fenced code / quote / thematic break, with exact offsets; micromark
-remains the fallback for GFM tables, tasks, math, frontmatter, and friends.
-Phase 0 scaffold (API + micromark behind `// replace`) is done.
+**Phase 1 vertical slice shipped** — native block scanner for heading /
+paragraph / list / fenced code / quote / thematic break, with exact offsets;
+micromark remains the fallback for GFM tables, tasks, math, frontmatter, and
+friends. Phase 0 scaffold (API + micromark behind `// replace`) is done.
+Next: Phase 2 (native GFM tables + task lists).
 
 See:
 
@@ -35,7 +36,7 @@ See:
 pnpm add github:roobli/md
 ```
 
-## Usage (phase 0)
+## Usage
 
 ```ts
 import { parseBlocks, parseDocument } from "@roobli/md";

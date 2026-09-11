@@ -69,7 +69,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | Phase | Deliverable |
 | ----- | ----------- |
 | **0** (done) | Package + docs + API; micromark behind `// replace` |
-| **1** (now) | Native block splitter + offsets (heading/paragraph/list/fence/quote/thematic); micromark fallback for unknown |
+| **1** (done slice) | Native block splitter + offsets (heading/paragraph/list/fence/quote/thematic); micromark fallback for unknown |
 | **2** | Native GFM tables + task lists |
 | **3** | Math, frontmatter, HTML/defs, CJK parity; optional semantic keys |
 | **4** | Incremental / block-local reparse; streaming first-paint hooks |
