@@ -34,10 +34,50 @@ type ParseResult =
   | { status: "failed"; code: "INVALID_UTF8"; message: string };
 
 function parseDocument(bytes: Uint8Array): ParseResult;
+
+/** Character edit against joinSplit(prior). */
+interface SourceEdit {
+  priorStart: number;
+  priorEnd: number;
+  inserted: string;
+}
+
+interface BlockOrdinalRange { from: number; to: number; }
+
+interface ReparseBlocksOptions {
+  prior: SplitDocument;
+  text?: string;                 // required if edit omitted
+  edit?: SourceEdit;             // prior-source coordinates
+  replacedBlocks?: BlockOrdinalRange;
+  neighborSlack?: number;        // default 1; pass 0 for single-block path
+}
+
+interface ReparseBlocksResult extends SplitDocument {
+  dirtyFrom: number;
+  dirtyTo: number;
+  windowStart: number;
+  windowEnd: number;
+}
+
+/** Incremental / block-local reparse (Phase 4). Native hot path only. */
+function reparseBlocks(options: ReparseBlocksOptions): ReparseBlocksResult;
 ```
 
 Coverage invariant: concatenating `leading`, each `span.markdown`, each
 inter-span `gaps[i]`, and `trailing` yields `text` exactly.
+
+### Incremental reparse (Phase 4)
+
+`reparseBlocks` takes a prior `SplitDocument` plus either a `SourceEdit` (char
+range in prior coordinates) or `replacedBlocks` (inclusive ordinals), reparses
+only the dirty window (widened by `neighborSlack`), and stitches prefix /
+middle / suffix with absolute offsets. Untouched prefix spans keep object
+identity; untouched suffix spans keep `markdown` string identity. Micromark
+stays off this hot path for Phase 1–3 dialect documents.
+
+Noto call sites: `replaceMarkdown` can pass the differing middle ordinals as
+`replacedBlocks` instead of `splitBlocks(fullMarkdown)`; the single-block save
+path can use `neighborSlack: 0` after `parseSingleBlock` validation.
 
 ## Correctness goals
 
@@ -72,7 +112,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **1** (done slice) | Native block splitter + offsets (heading/paragraph/list/fence/quote/thematic); micromark fallback for unknown |
 | **2** (done) | Native GFM tables + task lists |
 | **3** (done) | Native math / frontmatter / HTML / defs + synthetic A/B bench |
-| **4** (next) | Incremental / block-local reparse; streaming first-paint hooks |
+| **4** (done) | Incremental / block-local reparse (`reparseBlocks`); streaming first-paint left to host |
 | **5** | Serialize dialect aligned with Noto’s byte-exact save rules |
 | **6** | Quarantine micromark from the hot path; mdast optional |
 

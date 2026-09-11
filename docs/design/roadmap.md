@@ -10,7 +10,7 @@ and only then drop micromark from the hot path.
 | **1** | **Done (vertical slice)** | Own **block splitter** with exact offsets that beats a blank-line-naive split (fences keep internal blanks; loose lists stay one block). Native recognition: ATX/setext heading, paragraph, bullet/ordered list, fenced code, quote, thematic break. **Fall back to micromark** for unknown constructs. Bench vs micromark deferred. |
 | **2** | **Done** | Native **GFM tables** + **task lists** (strikethrough stays inline inside paragraphs). Micromark fallback shrinks to math / frontmatter / HTML / definitions. |
 | **3** | **Done** | Native **display math** (`$$`), **YAML frontmatter**, HTML blocks, link/footnote definitions with exact offsets. Whole-doc micromark fallback no longer triggered for those constructs. Synthetic corpus A/B bench vs micromark recorded in `docs/design/bench.md`. |
-| **4** | **Next** | **Incremental / block-local reparse**; streaming / first-paint hooks for large opens. |
+| **4** | **Done** | **Incremental / block-local reparse** (`reparseBlocks` + edit range / replaced ordinals). Streaming / first-paint remains a host concern (parse a prefix with `parseBlocks`). |
 | **5** | Planned | **Serialize** dialect aligned with Noto’s byte-exact save rules (untouched spans sliced, not re-emitted). |
 | **6** | Planned | Quarantine or remove micromark from the hot path; mdast `node` becomes optional / successor IR. |
 
@@ -47,7 +47,20 @@ Phase 3 **shipped** on `main`. `// replace` path in `micromark-backend.ts` / `pa
 - **Indented code**: still labeled `paragraph` natively (micromark would say `indented-code`); no whole-doc bounce.
 - **Line-prefix offsets**: native spans include up to three leading spaces on the opening line; micromark often starts at the marker — coverage invariant still holds.
 - **CJK emphasis / `semanticKey`**: block split is kind+offset only; inline CJK flanking stays a micromark/host concern until a later IR phase.
-- **Phase 4 next**: incremental / block-local reparse and streaming first-paint hooks.
+- **Phase 4 done**: `reparseBlocks` stitches local native reparses; see contract.
+- **Phase 5 next**: serialize dialect aligned with Noto’s byte-exact save rules.
+
+## Phase 4 acceptance
+
+- [x] `reparseBlocks({ prior, edit?, replacedBlocks?, neighborSlack? })` in `src/reparse.ts`
+- [x] Reparse only dirty window (+ neighbors); stitch spans/gaps with absolute offsets
+- [x] Tests: edit middle paragraph, edit fence, insert/delete block boundary; contiguous offsets; untouched markdown identity
+- [x] Contract + roadmap document the API; micromark stays out of the hot path
+- [x] Noto bridge note: `replaceMarkdown` / single-block path can call `reparseBlocks`
+
+Phase 4 **shipped** on `main`. Streaming first-paint hooks stay with the host
+(open can still `parseBlocks` a growing prefix); no separate streaming API in
+this package yet.
 
 ## Noto hand-off checkpoints
 

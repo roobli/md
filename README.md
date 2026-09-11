@@ -16,14 +16,15 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 3 shipped** — native block scanner covers heading / paragraph / list /
-fenced code / quote / thematic break / GFM tables / task lists / **display
-math** / **YAML frontmatter** / **HTML blocks** / **link + footnote
-definitions**, with exact offsets. Whole-doc micromark fallback is no longer
-triggered for that dialect. Synthetic medium/large A/B vs micromark: native
-~4.5 ms / ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
-[`docs/design/bench.md`](docs/design/bench.md)). Phase 0–2 done.
-Next: Phase 4 (incremental / block-local reparse).
+**Phase 4 shipped** — `reparseBlocks` does incremental / block-local reparse
+from a prior split + edit range or replaced block ordinals, stitching spans /
+gaps with absolute offsets (micromark stays off the hot path). Phase 3 native
+scanner covers heading / paragraph / list / fenced code / quote / thematic /
+GFM tables / task lists / **display math** / **YAML frontmatter** / **HTML
+blocks** / **link + footnote definitions**. Synthetic medium/large A/B vs
+micromark: native ~4.5 ms / ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
+[`docs/design/bench.md`](docs/design/bench.md)). Phase 0–3 done.
+Next: Phase 5 (serialize / byte-exact save).
 
 See:
 
@@ -43,11 +44,19 @@ pnpm add github:roobli/md
 ## Usage
 
 ```ts
-import { parseBlocks, parseDocument } from "@roobli/md";
+import { parseBlocks, parseDocument, reparseBlocks } from "@roobli/md";
 
 const split = parseBlocks("# Hello\n\nWorld\n");
 // split.spans[0].kind === "heading"
 // split.spans[0].start / .end index into the source string
+
+const next = reparseBlocks({
+  prior: split,
+  edit: { priorStart: split.spans[1].start, priorEnd: split.spans[1].end, inserted: "Moon" },
+  replacedBlocks: { from: 1, to: 1 },
+  neighborSlack: 0,
+});
+// next.spans[0] === split.spans[0] (untouched identity)
 
 const doc = parseDocument(new TextEncoder().encode("# Hello\n"));
 if (doc.status === "parsed") {

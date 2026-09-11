@@ -48,7 +48,8 @@ See [`roadmap.md`](./roadmap.md) for the full table. Short form:
 | **1** (done) | Native splitter + offsets (heading/paragraph/list/fence/…) |
 | **2** (done) | GFM tables + task lists natively |
 | **3** (done) | Math / frontmatter / HTML / defs + synthetic A/B bench |
-| **4+** | Incremental reparse, serialize, drop hot-path micromark |
+| **4** (done) | Incremental / block-local reparse |
+| **5–6** | Serialize, drop hot-path micromark |
 
 ## Success metric
 

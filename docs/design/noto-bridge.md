@@ -32,6 +32,19 @@ falls back to micromark — same shapes):
   crypto hashing details (optional helpers; Noto may keep hashing in-process)
 - `BlockKind` aligns 1:1 with `NotoBlockKind` string unions
 - `parseSingleBlock(markdown)` for the save check
+- `reparseBlocks({ prior, edit?, replacedBlocks? })` for incremental edits
+  (Phase 4)
+
+### How Noto would call incremental reparse
+
+Today `NotoEditor.replaceMarkdown` runs `splitBlocks` on the **whole** buffer,
+then keeps a common prefix/suffix of equal block markdown. With `@roobli/md`:
+
+1. Keep the last accepted `SplitDocument` from open / prior reparse.
+2. Diff block markdown arrays to find `prefix` / `suffix` (same as today).
+3. Call `reparseBlocks({ prior, text: newMarkdown, replacedBlocks: { from: prefix, to: next.length - suffix - 1 }, neighborSlack: 1 })` instead of a full split.
+4. Single-block save validation can stay on `parseSingleBlock`; when applying
+   one accepted unit, use `neighborSlack: 0` with `replacedBlocks: { from: i, to: i }`.
 
 Noto integration path (later):
 
