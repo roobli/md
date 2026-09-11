@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { tryNativeSplit } from './backend/native-scanner.js';
 import { joinSplit, parseBlocks, parseDocument, parseSingleBlock } from './parse.js';
 
 describe('parseBlocks', () => {
-  it('covers every character exactly once', () => {
+  it('covers every character exactly once (micromark fallback path)', () => {
     const text = '---\ntitle: t\n---\n\n# Hello\n\nPara with **注意：**强调\n\n- [ ] task\n\n$$\nx\n$$\n';
     const split = parseBlocks(text);
+    expect(tryNativeSplit(text)).toBeNull(); // forces micromark
     expect(joinSplit(split)).toBe(text);
     expect(split.spans.length).toBeGreaterThanOrEqual(4);
     const kinds = split.spans.map((s) => s.kind);
@@ -14,7 +16,15 @@ describe('parseBlocks', () => {
     expect(kinds).toContain('display-math');
   });
 
-  it('classifies GFM table and strikethrough paragraph', () => {
+  it('uses native path for heading/paragraph/list/fence', () => {
+    const text = '# Hi\n\nPara\n\n```\ncode\n\nstill\n```\n\n- a\n- b\n';
+    expect(tryNativeSplit(text)).not.toBeNull();
+    const split = parseBlocks(text);
+    expect(joinSplit(split)).toBe(text);
+    expect(split.spans.map((s) => s.kind)).toEqual(['heading', 'paragraph', 'fenced-code', 'bullet-list']);
+  });
+
+  it('classifies GFM table and strikethrough paragraph via micromark', () => {
     const text = '| a | b |\n| - | - |\n| 1 | 2 |\n\n~~gone~~\n';
     const split = parseBlocks(text);
     expect(joinSplit(split)).toBe(text);

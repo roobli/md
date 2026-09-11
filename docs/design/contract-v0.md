@@ -15,7 +15,7 @@ interface BlockSpan {
   start: number; // into source text (no BOM)
   end: number;   // exclusive; trailing newlines belong to gaps
   markdown: string; // text.slice(start, end)
-  /** Host may ignore; phase 0 uses mdast RootContent. */
+  /** Host may ignore; micromark path uses mdast; native path may be null. */
   node: unknown;
 }
 
@@ -64,16 +64,22 @@ files in this repo).
 
 ## Phase plan
 
+Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
+
 | Phase | Deliverable |
 | ----- | ----------- |
-| **0** (this) | Package + docs + API; micromark behind `// replace` |
-| **1** | Semantic keys + parity tests against Noto fixtures (public/synthetic) |
-| **2** | Incremental / block-local reparse; streaming first paint hooks |
-| **3** | Custom block scanner replacing micromark for the hot path; mdast optional |
-| **4** | Serialize dialect aligned with Noto’s byte-exact save rules |
+| **0** (done) | Package + docs + API; micromark behind `// replace` |
+| **1** (now) | Native block splitter + offsets (heading/paragraph/list/fence/quote/thematic); micromark fallback for unknown |
+| **2** | Native GFM tables + task lists |
+| **3** | Math, frontmatter, HTML/defs, CJK parity; optional semantic keys |
+| **4** | Incremental / block-local reparse; streaming first-paint hooks |
+| **5** | Serialize dialect aligned with Noto’s byte-exact save rules |
+| **6** | Quarantine micromark from the hot path; mdast optional |
 
 ## Replace boundary
 
-`src/backend/micromark-backend.ts` is temporary. Call sites go through
-`src/parse.ts` only. When the custom engine lands, delete or quarantine the
-micromark backend without changing `parseBlocks`’s signature.
+`src/backend/micromark-backend.ts` is the compatibility backend. Phase 1 adds
+`src/backend/native-scanner.ts`; `parseBlocks` in `src/parse.ts` prefers native
+and falls back. Call sites go through `src/parse.ts` only. When the custom
+engine covers the dialect, quarantine micromark without changing
+`parseBlocks`’s signature.

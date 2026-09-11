@@ -25,17 +25,29 @@ public MIT package Noto (and later other hosts) can depend on.
 2. **Block-first API.** Top-level blocks with `start`/`end`, kind, optional
    mdast (or successor) node, and literal gaps between them — the shape
    `parseDocument` / `splitBlocks` / wire `nodes` already assume.
-3. **Replaceable implementation.** Phase 0 may wrap micromark. The public
-   contract must not force callers to import micromark types forever; the
-   replace boundary is explicit in source.
+3. **Replaceable implementation.** Phase 0 wrapped micromark. Phase 1 adds a
+   native block scanner with micromark fallback. The public contract must not
+   force callers to import micromark types forever.
 4. **No vault leakage.** Synthetic and public fixtures only in this repo.
    Never dump RooB private note content here.
 
 ## Non-goals (for now)
 
 - Shipping a full WYSIWYG editor UI (that stays in Noto / ProseMirror).
-- Pirating or redistributing Typora binaries or proprietary source.
+- Pirating or redistributing Typora binaries or proprietary source
+  (including macOS `TypeMark/appsrc`).
 - Matching every Typora extension or theme quirk.
+
+## Phases (summary)
+
+See [`roadmap.md`](./roadmap.md) for the full table. Short form:
+
+| Phase | Focus |
+| ----- | ----- |
+| **0** (done) | API + micromark behind `// replace` |
+| **1** (now) | Native splitter + offsets (heading/paragraph/list/fence/…) |
+| **2** | GFM tables + task lists natively |
+| **3+** | Math/frontmatter/CJK, incremental reparse, serialize, drop hot-path micromark |
 
 ## Success metric
 

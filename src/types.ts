@@ -10,10 +10,11 @@ export interface BlockSpan {
   readonly end: number;
   readonly markdown: string;
   /**
-   * Phase 0: mdast node. Later backends may use a different IR; hosts should
-   * treat this as opaque unless they opted into mdast.
+   * Phase 0 micromark backend: mdast node.
+   * Phase 1 native scanner: `null` (offsets + kind only; host may reparse).
+   * Later backends may use a different IR; treat as opaque unless opted in.
    */
-  readonly node: RootContent;
+  readonly node: RootContent | null;
 }
 
 export interface SplitDocument {

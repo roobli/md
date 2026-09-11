@@ -1,4 +1,5 @@
 import { splitWithMicromark } from './backend/micromark-backend.js';
+import { tryNativeSplit } from './backend/native-scanner.js';
 import type { BlockSpan, EngineDocument, EngineEnvelope, ParseResult, SplitDocument } from './types.js';
 
 const UTF8_BOM = Uint8Array.from([0xef, 0xbb, 0xbf]);
@@ -30,12 +31,17 @@ function decodeUtf8(bytes: Uint8Array): string | null {
 /**
  * Split markdown source into top-level blocks with exact offsets.
  *
- * Implementation currently delegates to micromark
- * (`./backend/micromark-backend.ts`). // replace that backend to land the
- * custom engine; do not fork call sites.
+ * Phase 1: try the native scanner first (heading / paragraph / list / fence /
+ * quote / thematic / setext). Fall back to micromark for GFM tables, tasks,
+ * math, frontmatter, HTML, definitions, etc.
+ *
+ * // replace — custom engine grows inside `native-scanner.ts`; micromark stays
+ * the compatibility backend until Phase 6.
  */
 export function parseBlocks(text: string): SplitDocument {
-  // replace — backend boundary
+  const native = tryNativeSplit(text);
+  if (native !== null) return native;
+  // replace — backend boundary (compatibility path)
   return splitWithMicromark(text);
 }
 

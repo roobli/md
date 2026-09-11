@@ -16,13 +16,15 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 0** — package scaffold, design docs, and a thin API that currently
-delegates to micromark/mdast behind a marked `// replace` boundary. Structure
-first; the custom engine replaces that boundary later.
+**Phase 1 (in progress)** — native block scanner for heading / paragraph /
+list / fenced code / quote / thematic break, with exact offsets; micromark
+remains the fallback for GFM tables, tasks, math, frontmatter, and friends.
+Phase 0 scaffold (API + micromark behind `// replace`) is done.
 
 See:
 
 - [`docs/design/vision.md`](docs/design/vision.md) — product goal
+- [`docs/design/roadmap.md`](docs/design/roadmap.md) — phased plan
 - [`docs/design/typora-notes.md`](docs/design/typora-notes.md) — Typora study (interop research)
 - [`docs/design/noto-bridge.md`](docs/design/noto-bridge.md) — how this plugs into Noto v3
 - [`docs/design/contract-v0.md`](docs/design/contract-v0.md) — engine contract sketch

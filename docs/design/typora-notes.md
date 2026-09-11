@@ -1,11 +1,15 @@
 # Typora study notes (interop research)
 
-Honest notes from (1) an official Linux `.deb` install on this box, (2) Noto’s
-existing measurements under `/workspace/Noto/docs/`, and (3) public docs that
-ship inside the package. **No proprietary source dump** — only visible assets
-(themes, CSS, public strings, process architecture, measured behaviour).
+Honest notes from (1) an official Linux `.deb` install on this box, (2) macOS
+Typora **1.14.9** inspected on the author’s Mac (`/Applications/Typora.app`),
+(3) Noto’s existing measurements under `/workspace/Noto/docs/`, and (4) public
+docs that ship inside the packages. **No proprietary source dump** — only
+visible assets (themes, CSS class names, public Docs strings, process
+architecture, measured behaviour). Do **not** copy Typora JS into this repo.
 
-## Install status (this box)
+## Install status
+
+### Linux (this box)
 
 | Item | Result |
 | ---- | ------ |
@@ -15,9 +19,22 @@ ship inside the package. **No proprietary source dump** — only visible assets
 | Version | App `1.13.6` (`resources/package.json`); Electron/Chromium payload `35.6.0` (`/usr/share/typora/version`) |
 | GUI / license | Not exercised headlessly here; package installs cleanly. License gate is a runtime concern for interactive use, not for inspecting on-disk assets. |
 
+### macOS 1.14.9 (author’s Mac)
+
+| Item | Result |
+| ---- | ------ |
+| Path | `/Applications/Typora.app` |
+| Version | **1.14.9** |
+| Shell | **Native WebKit** — `otool` links `WebKit.framework`; Sparkle for updates. **Not Electron** on macOS. |
+| Content bundle | `Contents/Resources/TypeMark/` |
+| Notable assets | `appsrc/main.js` (~1.6 MB — proprietary, do not vendor), `tpl/core.js`, CodeMirror, MathJax **4**, diagram helpers, `style/base.css`, public Docs |
+
+Platform shells differ (Electron on Linux, WebKit + TypeMark on macOS); the
+editing / block model below is what matters for a parser.
+
 ## Architecture hints
 
-### Linux (this install): Electron / Chromium
+### Linux: Electron / Chromium
 
 On-disk evidence:
 
@@ -29,54 +46,56 @@ On-disk evidence:
 
 So **Linux Typora is an Electron shell**, not a native WebKit app.
 
-### macOS (from Noto measurements): native WebKit
+### macOS: native WebKit + TypeMark
 
-Noto’s `docs/performance/measurements.md` records that Typora on macOS is a
-**native WebKit** application (not Electron), which is why CDP-based driving
-failed and why process-tree CPU sampling missed the content process. Treat
-platform shells as different; the editing model below is what matters for a
-parser.
+Confirmed on 1.14.9 via framework linkage (`WebKit.framework`) and the
+`TypeMark/` content tree under `Contents/Resources/`. Noto’s
+`docs/performance/measurements.md` already noted that CDP-based driving failed
+on macOS and that process-tree CPU sampling missed the content process — that
+matches a WebKit content process, not an Electron renderer.
 
-## Theme / CSS model
+**Research boundary:** summarize public CSS vocabulary + Docs + layout only.
+Never check `appsrc/main.js` / other proprietary TypeMark JS into `@roobli/md`.
 
-Public theme docs (`resources/Docs/Custom Themes.md`) and
-`resources/style/themes/`:
+## Theme / CSS model / `md-*` block vocabulary
+
+Public theme docs and `style/` (Linux package; macOS TypeMark mirrors the
+document surface):
 
 - Each theme is a `.css` file under the theme folder (`github`, `newsprint`,
   `night`, `pixyll`, `whitey`, …).
 - Custom themes: drop CSS into the user theme folder; `base.user.css` applies
   to all themes; `{name}.user.css` scopes to one theme.
 - Built-in CSS is overwritten on update — do not patch shipped files.
-- Chrome chrome vs document: `base.css`, `base-control.css`, `window.css`,
+- Chrome vs document: `base.css`, `base-control.css`, `window.css`,
   `megamenu.css`, plus CodeMirror styles for source / fence editing.
 
-Document surface selectors visible in `base.css` (class names only — useful as
-a **block vocabulary** Typora paints, not as something to clone):
+Document surface selectors visible in public `style/base.css` (`md-*` class
+names only — a **block vocabulary** Typora paints, not something to clone):
 
-- Blocks / constructs: `md-fences`, `md-math-block`, `md-meta-block` (YAML),
-  `md-table`, `md-task-list-item`, `md-rawblock`, `md-toc`, `md-alert*`
-  (GFM alerts / callouts), `md-footnote`, `md-diagram-panel`
-- Inline: `md-inline-math`, `md-html-inline`, `md-emoji`, `md-image`
-- Focus / expand: `md-focus`, `md-expand`, `md-plain`, `md-meta` (delimiter
-  chrome that shows while editing)
+| Area | Classes (names only) |
+| ---- | -------------------- |
+| Blocks / constructs | `md-fences`, `md-math-block`, `md-meta-block` (YAML), `md-table`, `md-task-list-item`, `md-rawblock`, `md-toc`, `md-alert*` (GFM alerts / callouts), `md-footnote`, `md-diagram-panel` |
+| Inline | `md-inline-math`, `md-html-inline`, `md-emoji`, `md-image` |
+| Focus / expand | `md-focus`, `md-expand`, `md-plain`, `md-meta` (delimiter chrome while editing) |
 
 Implication for a WYSIWYG parser: **top-level blocks are first-class editing
 units**, with optional “raw” / meta chrome shown only when focused — the same
 habit Noto’s ProseMirror node views already chase.
 
-## Source mode / live preview / block model
+## Source mode / live preview / dialect (public Docs)
 
-From shipped `Quick Start.md` (public):
+From shipped public Docs (`Quick Start` and related):
 
 - **Live Preview** is the default: inline styles appear after typing finishes;
   block styles appear as you type or after Enter / leaving the paragraph.
 - Markdown tags for inline marks hide smartly; block markers (`###`, `- [x]`)
   hide once the block is rendered.
-- **Source code mode** exists (`Ctrl+/`) but Typora itself calls support
-  “very basic” and does not recommend it as the primary path.
-- Fence / source editing uses **CodeMirror** styling (`codemirror.css`,
-  `mock-cm` fences) inside the live document — hybrid, not a separate preview
-  pane.
+- **Source code mode** exists but Typora itself calls support “very basic”.
+- Fence / source editing uses **CodeMirror** styling inside the live document —
+  hybrid, not a separate preview pane.
+- Public Docs state Typora uses **GFM**. Paragraph = one Return; Shift+Return
+  soft break.
 
 Parser implications:
 
@@ -85,6 +104,7 @@ Parser implications:
 3. Keep delimiter / source text recoverable per block for focus-reveal and for
    byte-exact save of untouched neighbours.
 4. Source mode is a consumer of the same underlying text, not a second dialect.
+5. Align soft-break / hard-break habits with GFM Docs claims when serializing.
 
 ## Constructs Noto already cares about (from typora-gap + v3)
 
@@ -123,7 +143,7 @@ files people actually keep and the mid-size open they feel every day.
 
 ## Research boundaries
 
-- OK: themes, CSS, public docs, process layout, measured open behaviour,
-  remote-control timing Noto already built.
-- Not OK: cracking license checks, redistributing Typora, or checking
-  proprietary ASAR/JS into this repo.
+- OK: themes, CSS class vocabulary, public Docs, process / bundle layout,
+  measured open behaviour, remote-control timing Noto already built.
+- Not OK: cracking license checks, redistributing Typora, dumping proprietary
+  `TypeMark/appsrc` JS (or Linux ASAR bodies) into this repo.

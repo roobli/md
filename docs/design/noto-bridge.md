@@ -24,7 +24,8 @@ emphasis, math (`singleDollarTextMath: true`), YAML frontmatter.
 
 ## How `@roobli/md` maps
 
-Phase 0 exports a host-agnostic twin:
+Phase 0+ exports a host-agnostic twin (Phase 1 prefers a native splitter, then
+falls back to micromark — same shapes):
 
 - `parseBlocks(text)` ≈ `splitBlocks` (spans + leading/gaps/trailing + nodes)
 - `parseDocument(bytes)` ≈ Noto’s `parseDocument` without Noto’s branded IDs /
