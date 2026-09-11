@@ -34,6 +34,8 @@ falls back to micromark — same shapes):
 - `parseSingleBlock(markdown)` for the save check
 - `reparseBlocks({ prior, edit?, replacedBlocks? })` for incremental edits
   (Phase 4)
+- `serializeDocument` / `joinSplit(split, source?)` / `renderMarkdown` for
+  byte-exact saves (Phase 5)
 
 ### How Noto would call incremental reparse
 
@@ -51,10 +53,19 @@ Noto integration path (later):
 1. Depend on `@roobli/md`.
 2. Implement `splitBlocks` as a thin adapter over `parseBlocks` (map kinds,
    compute `semanticKey` if the engine does not yet).
-3. Keep `sha256`, branded IDs, and serialize/`NotoTransaction` in Noto until
-   the engine grows a serialize story.
+3. Keep `sha256` and branded IDs in Noto; map `NotoTransaction.units` →
+   `SerializeUnit[]` (origin ordinal + markdown) and call `serializeDocument`,
+   or keep Noto’s serialize as a wrapper that still slices via engine offsets.
 4. Preserve wire `nodes`: open path must still ship top-level nodes so the
    renderer does not reparse.
+5. **Serialize adoption steps**
+   - Switch identity / single-block save tests to `@roobli/md` `serializeDocument`
+     and compare `outputBytes` against today’s Noto golden fixtures.
+   - Point edited-block rendering at `renderMarkdown` once wiki-link / list-marker
+     / hard-break handlers are ported (or keep Noto `syntax.ts` render until then).
+   - Retire duplicate gap/slice logic in Noto `serialize.ts` when the engine path
+     matches preserved-range evidence the store expects.
+   - Leave `source` mode (full-file replace) in Noto — it is a host escape hatch.
 
 ## Byte-exact gaps
 

@@ -16,15 +16,16 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 4 shipped** — `reparseBlocks` does incremental / block-local reparse
-from a prior split + edit range or replaced block ordinals, stitching spans /
-gaps with absolute offsets (micromark stays off the hot path). Phase 3 native
-scanner covers heading / paragraph / list / fenced code / quote / thematic /
-GFM tables / task lists / **display math** / **YAML frontmatter** / **HTML
-blocks** / **link + footnote definitions**. Synthetic medium/large A/B vs
-micromark: native ~4.5 ms / ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
-[`docs/design/bench.md`](docs/design/bench.md)). Phase 0–3 done.
-Next: Phase 5 (serialize / byte-exact save).
+**Phase 5 shipped** — `serializeDocument` / hardened `joinSplit` implement
+Noto-aligned byte-exact saves: untouched spans sliced from source, gaps
+preserved, edited spans via host markdown or `renderMarkdown`. Phase 4
+`reparseBlocks` does incremental / block-local reparse. Phase 3 native scanner
+covers heading / paragraph / list / fenced code / quote / thematic / GFM tables
+/ task lists / **display math** / **YAML frontmatter** / **HTML blocks** /
+**link + footnote definitions**. Synthetic medium/large A/B vs micromark:
+native ~4.5 ms / ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
+[`docs/design/bench.md`](docs/design/bench.md)). Phase 0–4 done.
+Next: Phase 6 (quarantine micromark from the hot path).
 
 See:
 
@@ -44,7 +45,14 @@ pnpm add github:roobli/md
 ## Usage
 
 ```ts
-import { parseBlocks, parseDocument, reparseBlocks } from "@roobli/md";
+import {
+  parseBlocks,
+  parseDocument,
+  reparseBlocks,
+  serializeDocument,
+  identityUnits,
+  replaceBlock,
+} from "@roobli/md";
 
 const split = parseBlocks("# Hello\n\nWorld\n");
 // split.spans[0].kind === "heading"
@@ -58,9 +66,10 @@ const next = reparseBlocks({
 });
 // next.spans[0] === split.spans[0] (untouched identity)
 
-const doc = parseDocument(new TextEncoder().encode("# Hello\n"));
+const doc = parseDocument(new TextEncoder().encode("# Hello\n\nWorld\n"));
 if (doc.status === "parsed") {
-  console.log(doc.document.blocks.length);
+  const saved = replaceBlock(doc.document, 0, "# Renamed");
+  // untouched "World" block sliced from source — not re-serialized
 }
 ```
 

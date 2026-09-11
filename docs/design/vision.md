@@ -49,7 +49,8 @@ See [`roadmap.md`](./roadmap.md) for the full table. Short form:
 | **2** (done) | GFM tables + task lists natively |
 | **3** (done) | Math / frontmatter / HTML / defs + synthetic A/B bench |
 | **4** (done) | Incremental / block-local reparse |
-| **5–6** | Serialize, drop hot-path micromark |
+| **5** (done) | Serialize / byte-exact save |
+| **6** | Drop hot-path micromark |
 
 ## Success metric
 

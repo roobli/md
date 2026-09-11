@@ -87,11 +87,20 @@ export function parseDocument(bytes: Uint8Array): ParseResult {
   return { status: 'parsed', document };
 }
 
-/** Concatenate a split back to source — used by coverage tests. */
-export function joinSplit(split: SplitDocument): string {
+/**
+ * Concatenate a split back to source.
+ *
+ * When `source` is provided, each span is emitted by **slicing**
+ * `source.slice(start, end)` — never by trusting a re-stringified
+ * `span.markdown`. Gaps / leading / trailing still come from the split
+ * (they are already literal slices from the prior parse). This is the
+ * foundation of Phase 5 byte-exact saves.
+ */
+export function joinSplit(split: SplitDocument, source?: string): string {
   let out = split.leading;
   for (let index = 0; index < split.spans.length; index += 1) {
-    out += split.spans[index]!.markdown;
+    const span = split.spans[index]!;
+    out += source !== undefined ? source.slice(span.start, span.end) : span.markdown;
     if (index < split.gaps.length) out += split.gaps[index]!;
   }
   out += split.trailing;

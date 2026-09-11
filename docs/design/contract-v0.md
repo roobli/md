@@ -79,6 +79,45 @@ Noto call sites: `replaceMarkdown` can pass the differing middle ordinals as
 `replacedBlocks` instead of `splitBlocks(fullMarkdown)`; the single-block save
 path can use `neighborSlack: 0` after `parseSingleBlock` validation.
 
+### Serialize (Phase 5)
+
+```ts
+interface SerializeUnit {
+  origin: number | null;   // prior block ordinal, or null = insert
+  markdown: string | null; // null = pristine (slice from document.text)
+  node?: RootContent | null; // optional dialect render for dirty units
+}
+
+interface SerializeOptions {
+  units: readonly SerializeUnit[];
+  envelope?: { lineEnding?: 'lf' | 'crlf' | 'mixed'; hasFinalNewline?: boolean };
+}
+
+function joinSplit(split: SplitDocument, source?: string): string;
+function identityUnits(document: EngineDocument): SerializeUnit[];
+function serializeDocument(document: EngineDocument, options: SerializeOptions): SerializeResult;
+function replaceBlock(document: EngineDocument, ordinal: number, markdown: string): SerializeResult;
+function renderMarkdown(node: Nodes): string; // dialect path for edited mdast
+```
+
+Byte-exact rules (aligned with Noto `serialize.ts`):
+
+1. **Untouched spans** are emitted by slicing `document.text.slice(start, end)`,
+   never by re-stringifying mdast / dialect output.
+2. **Gaps** between adjacent surviving origins are reused from the prior split
+   when the gap contains a blank line, or when both neighbours are pristine.
+3. **Edited spans** emit host-supplied markdown (LF → document line ending) or
+   `renderMarkdown(node)` when only an mdast node is provided; each unit must
+   still be exactly one block (`parseSingleBlock`).
+4. `joinSplit(split, source)` hardens coverage tests: with `source`, spans are
+   sliced by offset so a poisoned `span.markdown` cannot fake a round-trip.
+
+Dialect hypothesis (verify on bridge): bullet `-`, emphasis/strong `*`, fenced
+backticks, `listItemIndent: 'one'`, GFM `tablePipeAlign: false`, pair-only
+tilde strike, math + YAML frontmatter, CJK to-markdown. Noto still owns
+wiki-link verbatim runs, list-marker-from-node, and hard-break-as-two-spaces
+until those handlers move.
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
@@ -113,7 +152,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **2** (done) | Native GFM tables + task lists |
 | **3** (done) | Native math / frontmatter / HTML / defs + synthetic A/B bench |
 | **4** (done) | Incremental / block-local reparse (`reparseBlocks`); streaming first-paint left to host |
-| **5** | Serialize dialect aligned with Noto’s byte-exact save rules |
+| **5** (done) | Serialize dialect aligned with Noto’s byte-exact save rules |
 | **6** | Quarantine micromark from the hot path; mdast optional |
 
 ## Replace boundary
