@@ -21,13 +21,15 @@ can depend on it without inheriting that copyleft.
 scanner only; the Phase 0 backend lives at `@roobli/md/legacy-micromark`.
 Phase 5 `serializeDocument` / hardened `joinSplit` implement Noto-aligned
 byte-exact saves. Phase 3 native scanner covers heading / paragraph / list /
-fenced code / quote / thematic / GFM tables / task lists / **display math** /
-**YAML frontmatter** / **HTML blocks** / **link + footnote definitions**.
+fenced code / **indented code** / quote / thematic / GFM tables / task lists /
+**display math** / **YAML frontmatter** / **HTML blocks** / **link + footnote
+definitions**.
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.1** — native quote split matches CommonMark tight adjacent quotes/callouts
-(no merge across unprefixed blanks). Noto pins `github:roobli/md#v0.1.1`.
+**v0.1.2** — native **indented-code** (CommonMark ≥4 spaces / tab; internal blanks
+kept; does not interrupt paragraphs). **v0.1.1** quote/callout split parity
+remains. Noto may pin `github:roobli/md#v0.1.2` when ready.
 
 See:
 

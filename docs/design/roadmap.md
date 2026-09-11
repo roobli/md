@@ -44,7 +44,7 @@ Phase 3 **shipped** on `main`. Phase 6 moved micromark behind `@roobli/md/legacy
 ### What still falls back / remaining gaps
 
 - **Whole-doc micromark fallback (Phase 6)**: removed from `parseBlocks`. Compat lives at `@roobli/md/legacy-micromark`.
-- **Indented code**: still labeled `paragraph` natively (micromark would say `indented-code`); no whole-doc bounce.
+- **Indented code**: **native** (`indented-code`) with exact offsets; internal blanks between indented chunks stay one span; does not interrupt paragraphs (CommonMark). Shipped post–Phase 6 in v0.1.2.
 - **Line-prefix offsets**: native spans include up to three leading spaces on the opening line; micromark often starts at the marker — coverage invariant still holds.
 - **CJK emphasis / `semanticKey`**: block split is kind+offset only; inline CJK flanking stays a host / IR concern.
 - **Phase 4 done**: `reparseBlocks` stitches local native reparses; see contract.
@@ -90,6 +90,8 @@ remain a host concern until the engine’s IR is stable.
 - [x] `pnpm bench:ab` compares native vs legacy entry
 - [x] Document dependency / entry breaking change honestly
 
-Phase 6 **shipped** on `main`. Next: **Noto integration spike** (adapter PR
-mapping `parseBlocks` / `reparseBlocks` / `serializeDocument`) or **`v0.1.0`**
-tag once the public API is treated as coherent for first consumers.
+Phase 6 **shipped** on `main`. Post–Phase 6 construct polish: **native
+indented-code** (v0.1.2). Noto already has a default-off adapter spike; next
+engine-side work is optional (line-prefix offset alignment, more Typora
+interop notes) or host adoption (default-on + `reparseBlocks` in
+`replaceMarkdown`).

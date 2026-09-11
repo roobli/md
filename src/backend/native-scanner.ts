@@ -1,16 +1,16 @@
 /**
- * Native block scanner (Phase 1–3).
+ * Native block scanner (Phase 1–3 + indented-code).
  *
  * Recognizes a CommonMark-ish subset plus GFM tables/task lists, display math,
- * YAML frontmatter, HTML blocks, and link/footnote definitions with exact
- * character offsets, without calling micromark.
+ * YAML frontmatter, HTML blocks, link/footnote definitions, and indented code
+ * with exact character offsets, without calling micromark.
  *
  * Beats a blank-line-naive splitter: fenced code keeps internal blank lines;
- * tight/loose lists (and task lists) stay one block across inter-item blanks.
+ * tight/loose lists (and task lists) stay one block across inter-item blanks;
+ * indented code keeps internal blanks between indented chunks.
  *
- * Whole-document micromark fallback is no longer triggered for Phase 3
- * constructs. Remaining gaps (e.g. indented-code kind vs paragraph) are
- * labeled natively rather than bouncing the whole doc to micromark.
+ * Indented code does not interrupt paragraphs (CommonMark). Remaining gaps
+ * (line-prefix offset quirks vs micromark) stay documented in the roadmap.
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -74,6 +74,11 @@ function stripIndent(content: string, max = 3): string {
 
 function isBlank(content: string): boolean {
   return /^\s*$/.test(content);
+}
+
+/** CommonMark indented code: ≥4 spaces (or a tab) of indent on a non-blank line. */
+function isIndentedCodeLine(content: string): boolean {
+  return !isBlank(content) && indentOf(content) >= 4;
 }
 
 function isAtxHeading(content: string): boolean {
@@ -532,6 +537,33 @@ export function tryNativeSplit(text: string): SplitDocument {
       const kind = hasTask ? 'task-list' : ordered ? 'ordered-list' : 'bullet-list';
       raw.push({ kind, start, end });
       i = j;
+      continue;
+    }
+
+    // Indented code (CommonMark): ≥4 spaces / tab; does not interrupt paragraphs
+    // (only reached at block starts after blanks). Internal blanks between
+    // indented chunks stay inside one span; trailing blanks after the last
+    // indented line become gaps.
+    if (isIndentedCodeLine(line.content)) {
+      const start = line.start;
+      let j = i + 1;
+      let lastContent = i;
+      while (j < lines.length) {
+        const next = lines[j]!;
+        if (isBlank(next.content)) {
+          j += 1;
+          continue;
+        }
+        if (isIndentedCodeLine(next.content)) {
+          lastContent = j;
+          j += 1;
+          continue;
+        }
+        break;
+      }
+      const end = lines[lastContent]!.next;
+      raw.push({ kind: 'indented-code', start, end });
+      i = lastContent + 1;
       continue;
     }
 

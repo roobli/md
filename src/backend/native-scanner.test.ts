@@ -217,6 +217,51 @@ describe('tryNativeSplit', () => {
     expect(fnSplit!.spans[0]!.markdown).toBe('[^note]: line1\n  line2');
   });
 
+  it('natively splits indented code with exact offsets (beats paragraph mislabel)', () => {
+    const single = '    indented();\n';
+    const singleSplit = tryNativeSplit(single);
+    expect(singleSplit).not.toBeNull();
+    expect(joinSplit(singleSplit!)).toBe(single);
+    expect(singleSplit!.spans).toHaveLength(1);
+    expect(singleSplit!.spans[0]!.kind).toBe('indented-code');
+    expect(singleSplit!.spans[0]!.start).toBe(0);
+    expect(singleSplit!.spans[0]!.end).toBe('    indented();'.length);
+    expect(singleSplit!.spans[0]!.markdown).toBe('    indented();');
+    expect(singleSplit!.spans[0]!.node).toBeNull();
+
+    // Tab indent counts as ≥4.
+    const tabbed = '\ttabbed\n';
+    expect(tryNativeSplit(tabbed)!.spans[0]!.kind).toBe('indented-code');
+
+    // Internal blank between indented chunks stays one block (micromark parity).
+    const multi = '    a\n\n    b\n';
+    const multiSplit = tryNativeSplit(multi);
+    expect(joinSplit(multiSplit!)).toBe(multi);
+    expect(multiSplit!.spans).toHaveLength(1);
+    expect(multiSplit!.spans[0]!.kind).toBe('indented-code');
+    expect(multiSplit!.spans[0]!.markdown).toBe('    a\n\n    b');
+
+    // After a paragraph + blank → indented-code, not paragraph.
+    const after = 'Para\n\n    code\n';
+    const afterSplit = tryNativeSplit(after);
+    expect(joinSplit(afterSplit!)).toBe(after);
+    expect(afterSplit!.spans.map((s) => s.kind)).toEqual(['paragraph', 'indented-code']);
+    expect(afterSplit!.spans[1]!.markdown).toBe('    code');
+
+    // Does not interrupt a paragraph (CommonMark).
+    const lazy = 'foo\n    bar\n';
+    const lazySplit = tryNativeSplit(lazy);
+    expect(lazySplit!.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(lazySplit!.spans[0]!.markdown).toBe('foo\n    bar');
+
+    // 4-space list / fence-looking lines are indented-code, not list/fence.
+    expect(tryNativeSplit('    - not list\n')!.spans[0]!.kind).toBe('indented-code');
+    expect(tryNativeSplit('    ```\n    notfence\n')!.spans[0]!.kind).toBe('indented-code');
+
+    // 3 spaces remain a paragraph (not indented-code).
+    expect(tryNativeSplit('   three\n')!.spans[0]!.kind).toBe('paragraph');
+  });
+
   it('handles frontmatter + math + html + defs in one native pass', () => {
     const text =
       '---\ntitle: t\n---\n\n# H\n\n$$\na+b\n$$\n\n<div>\nx\n</div>\n\n[ref]: https://ex.com\n\n[^a]: note\n';
