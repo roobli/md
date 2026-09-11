@@ -2,7 +2,7 @@
 
 Phases are ordered for Noto’s bridge (`docs/design/noto-bridge.md`): keep
 `parseBlocks` / `parseDocument` stable, grow the native scanner behind them,
-and only then drop micromark from the hot path.
+and only then quarantine micromark from the hot path (done in Phase 6).
 
 | Phase | Status | Deliverable |
 | ----- | ------ | ----------- |
@@ -12,7 +12,7 @@ and only then drop micromark from the hot path.
 | **3** | **Done** | Native **display math** (`$$`), **YAML frontmatter**, HTML blocks, link/footnote definitions with exact offsets. Whole-doc micromark fallback no longer triggered for those constructs. Synthetic corpus A/B bench vs micromark recorded in `docs/design/bench.md`. |
 | **4** | **Done** | **Incremental / block-local reparse** (`reparseBlocks` + edit range / replaced ordinals). Streaming / first-paint remains a host concern (parse a prefix with `parseBlocks`). |
 | **5** | **Done** | **Serialize** dialect aligned with Noto’s byte-exact save rules (untouched spans sliced, not re-emitted). |
-| **6** | Planned | Quarantine or remove micromark from the hot path; mdast `node` becomes optional / successor IR. |
+| **6** | **Done** | Quarantine micromark from the hot path; legacy entry `@roobli/md/legacy-micromark`; mdast `node` optional on native path. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -39,14 +39,14 @@ and only then drop micromark from the hot path.
 - [x] Whole-doc micromark fallback no longer fires for Phase 3 constructs
 - [x] `scripts/bench-ab.mjs` synthetic medium/large A/B vs micromark; numbers in `docs/design/bench.md`
 
-Phase 3 **shipped** on `main`. `// replace` path in `micromark-backend.ts` / `parse.ts` remains for the full swap (Phase 6).
+Phase 3 **shipped** on `main`. Phase 6 moved micromark behind `@roobli/md/legacy-micromark`.
 
 ### What still falls back / remaining gaps
 
-- **Whole-doc micromark fallback**: not triggered for Phase 1–3 dialect documents (`tryNativeSplit` returns a split). Compatibility path remains if native ever returns `null`.
+- **Whole-doc micromark fallback (Phase 6)**: removed from `parseBlocks`. Compat lives at `@roobli/md/legacy-micromark`.
 - **Indented code**: still labeled `paragraph` natively (micromark would say `indented-code`); no whole-doc bounce.
 - **Line-prefix offsets**: native spans include up to three leading spaces on the opening line; micromark often starts at the marker — coverage invariant still holds.
-- **CJK emphasis / `semanticKey`**: block split is kind+offset only; inline CJK flanking stays a micromark/host concern until a later IR phase.
+- **CJK emphasis / `semanticKey`**: block split is kind+offset only; inline CJK flanking stays a host / IR concern.
 - **Phase 4 done**: `reparseBlocks` stitches local native reparses; see contract.
 - **Phase 5 done**: `serializeDocument` / hardened `joinSplit`; see contract.
 
@@ -82,8 +82,14 @@ branded IDs and hashing. After Phase 5: Noto can call `serializeDocument` /
 `replaceBlock` (or keep its richer `NotoTransaction` wrapper). Wire `nodes`
 remain a host concern until the engine’s IR is stable.
 
-### Phase 6 next
+## Phase 6 acceptance
 
-Quarantine or remove micromark from the hot path; make mdast `node` optional /
-successor IR. Compatibility `// replace` boundary in `micromark-backend.ts`
-stays until native covers every construct the fallback still might see.
+- [x] `parseBlocks` / `parseDocument` / `reparseBlocks` / serialize never import micromark on the default path
+- [x] Micromark backend exported only via `@roobli/md/legacy-micromark`
+- [x] Direct micromark-extension / `mdast-util-from-markdown` deps moved to `optionalDependencies`
+- [x] `pnpm bench:ab` compares native vs legacy entry
+- [x] Document dependency / entry breaking change honestly
+
+Phase 6 **shipped** on `main`. Next: **Noto integration spike** (adapter PR
+mapping `parseBlocks` / `reparseBlocks` / `serializeDocument`) or **`v0.1.0`**
+tag once the public API is treated as coherent for first consumers.

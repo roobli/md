@@ -15,7 +15,7 @@ interface BlockSpan {
   start: number; // into source text (no BOM)
   end: number;   // exclusive; trailing newlines belong to gaps
   markdown: string; // text.slice(start, end)
-  /** Host may ignore; micromark path uses mdast; native path may be null. */
+  /** Native hot path: null. Legacy micromark entry may attach mdast. */
   node: unknown;
 }
 
@@ -59,7 +59,7 @@ interface ReparseBlocksResult extends SplitDocument {
   windowEnd: number;
 }
 
-/** Incremental / block-local reparse (Phase 4). Native hot path only. */
+/** Incremental / block-local reparse (Phase 4). Native only (Phase 6). */
 function reparseBlocks(options: ReparseBlocksOptions): ReparseBlocksResult;
 ```
 
@@ -72,8 +72,7 @@ inter-span `gaps[i]`, and `trailing` yields `text` exactly.
 range in prior coordinates) or `replacedBlocks` (inclusive ordinals), reparses
 only the dirty window (widened by `neighborSlack`), and stitches prefix /
 middle / suffix with absolute offsets. Untouched prefix spans keep object
-identity; untouched suffix spans keep `markdown` string identity. Micromark
-stays off this hot path for Phase 1–3 dialect documents.
+identity; untouched suffix spans keep `markdown` string identity. Micromark is not imported on this path (Phase 6); use `@roobli/md/legacy-micromark` for compat.
 
 Noto call sites: `replaceMarkdown` can pass the differing middle ordinals as
 `replacedBlocks` instead of `splitBlocks(fullMarkdown)`; the single-block save
@@ -153,12 +152,8 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **3** (done) | Native math / frontmatter / HTML / defs + synthetic A/B bench |
 | **4** (done) | Incremental / block-local reparse (`reparseBlocks`); streaming first-paint left to host |
 | **5** (done) | Serialize dialect aligned with Noto’s byte-exact save rules |
-| **6** | Quarantine micromark from the hot path; mdast optional |
+| **6** (done) | Quarantine micromark; `@roobli/md/legacy-micromark`; mdast optional |
 
 ## Replace boundary
 
-`src/backend/micromark-backend.ts` is the compatibility backend. Phase 1 adds
-`src/backend/native-scanner.ts`; `parseBlocks` in `src/parse.ts` prefers native
-and falls back. Call sites go through `src/parse.ts` only. When the custom
-engine covers the dialect, quarantine micromark without changing
-`parseBlocks`’s signature.
+`src/backend/micromark-backend.ts` is quarantined behind `@roobli/md/legacy-micromark` (Phase 6). Default `parseBlocks` uses the native scanner only.

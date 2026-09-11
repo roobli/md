@@ -88,3 +88,24 @@ describe('parseDocument', () => {
     expect(result.code).toBe('INVALID_UTF8');
   });
 });
+
+
+describe('Phase 6 micromark quarantine', () => {
+  it('parse.ts source does not import the micromark backend', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const src = readFileSync(fileURLToPath(new URL('./parse.ts', import.meta.url)), 'utf8');
+    expect(src).not.toMatch(
+      /import\s+.*(?:micromark-backend|splitWithMicromark|fromMarkdown|mdast-util-from-markdown)/,
+    );
+    expect(src).toMatch(/tryNativeSplit/);
+    expect(src).not.toMatch(/from ['"]\.\/backend\/micromark/);
+  });
+
+  it('legacy entry still exports splitWithMicromark', async () => {
+    const { splitWithMicromark } = await import('./legacy-micromark.js');
+    const split = splitWithMicromark('# Hi\n\nBody\n');
+    expect(split.spans.map((s) => s.kind)).toEqual(['heading', 'paragraph']);
+    expect(joinSplit(split)).toBe('# Hi\n\nBody\n');
+  });
+});

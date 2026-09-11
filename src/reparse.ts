@@ -7,8 +7,8 @@
  * only the dirty window (plus optional neighbor slack for fence/boundary
  * safety), then stitches prefix / middle / suffix with absolute offsets.
  *
- * Hot path uses `parseBlocks` → native scanner; micromark is not invited for
- * Phase 1–3 dialect documents.
+ * Hot path uses `parseBlocks` → native scanner only (Phase 6). Micromark is not
+ * imported; use `@roobli/md/legacy-micromark` for the compat backend.
  */
 
 import { joinSplit, parseBlocks } from './parse.js';

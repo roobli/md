@@ -1,8 +1,8 @@
 /**
- * Phase 0 parse backend: micromark + mdast extensions matching Noto's dialect.
+ * Legacy micromark + mdast parse backend (quarantined in Phase 6).
  *
- * // replace — swap this module for the custom WYSIWYG engine without changing
- * parseBlocks() / parseDocument() signatures in ../parse.ts.
+ * Default `@roobli/md` never imports this module. Use
+ * `@roobli/md/legacy-micromark` (or import here for benches / compat).
  */
 
 import { fromMarkdown } from 'mdast-util-from-markdown';
@@ -79,7 +79,7 @@ function trimTrailingNewlines(text: string, end: number): number {
   return cursor;
 }
 
-/** // replace — entry used by parseBlocks. */
+/** Compatibility split — prefer native `tryNativeSplit` / `parseBlocks`. */
 export function splitWithMicromark(text: string): SplitDocument {
   const root = parseMarkdown(text);
   const spans: BlockSpan[] = [];

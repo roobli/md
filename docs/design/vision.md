@@ -25,9 +25,10 @@ public MIT package Noto (and later other hosts) can depend on.
 2. **Block-first API.** Top-level blocks with `start`/`end`, kind, optional
    mdast (or successor) node, and literal gaps between them — the shape
    `parseDocument` / `splitBlocks` / wire `nodes` already assume.
-3. **Replaceable implementation.** Phase 0 wrapped micromark. Phase 1 adds a
-   native block scanner with micromark fallback. The public contract must not
-   force callers to import micromark types forever.
+3. **Replaceable implementation.** Phase 0 wrapped micromark. Phase 1–5 grew
+   the native scanner; Phase 6 quarantined micromark behind
+   `@roobli/md/legacy-micromark`. The public contract must not force callers to
+   import micromark types.
 4. **No vault leakage.** Synthetic and public fixtures only in this repo.
    Never dump RooB private note content here.
 
@@ -50,7 +51,7 @@ See [`roadmap.md`](./roadmap.md) for the full table. Short form:
 | **3** (done) | Math / frontmatter / HTML / defs + synthetic A/B bench |
 | **4** (done) | Incremental / block-local reparse |
 | **5** (done) | Serialize / byte-exact save |
-| **6** | Drop hot-path micromark |
+| **6** (done) | Quarantine hot-path micromark (`legacy-micromark` entry) |
 
 ## Success metric
 

@@ -310,12 +310,11 @@ function spansToSplit(text: string, raw: { kind: BlockKind; start: number; end: 
 }
 
 /**
- * Try a native split. Always succeeds for the Phase 1–3 dialect (returns a
- * SplitDocument). Returns `null` only for the empty-guard path is unused —
- * kept as `SplitDocument | null` for parseBlocks compatibility; currently
- * never returns null for non-empty failure cases.
+ * Native split for the Phase 1–5 dialect. Always returns a SplitDocument
+ * (never null). Micromark is not consulted — see `@roobli/md/legacy-micromark`
+ * for the Phase 0 compatibility backend.
  */
-export function tryNativeSplit(text: string): SplitDocument | null {
+export function tryNativeSplit(text: string): SplitDocument {
   if (text.length === 0) {
     return { spans: [], leading: '', gaps: [], trailing: '' };
   }

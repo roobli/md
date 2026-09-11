@@ -10,9 +10,9 @@ export interface BlockSpan {
   readonly end: number;
   readonly markdown: string;
   /**
-   * Phase 0 micromark backend: mdast node.
-   * Phase 1 native scanner: `null` (offsets + kind only; host may reparse).
-   * Later backends may use a different IR; treat as opaque unless opted in.
+   * Optional mdast node. Native hot path always sets `null` (kind + offsets).
+   * Legacy `@roobli/md/legacy-micromark` attaches mdast nodes. Treat as opaque
+   * unless the host opted into the legacy IR.
    */
   readonly node: RootContent | null;
 }

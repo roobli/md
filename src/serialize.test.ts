@@ -1,4 +1,4 @@
-import { fromMarkdown } from 'mdast-util-from-markdown';
+import type { Heading, Paragraph } from 'mdast';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdown } from './dialect.js';
 import { joinSplit, parseBlocks, parseDocument } from './parse.js';
@@ -178,9 +178,21 @@ describe('serializeDocument safety', () => {
 
 describe('dialect renderMarkdown (edited path)', () => {
   it('emits heading/paragraph with Noto-like markers', () => {
-    const root = fromMarkdown('# Hi\n\nA *soft* and **loud** word.\n');
-    const heading = root.children[0]!;
-    const para = root.children[1]!;
+    const heading: Heading = {
+      type: 'heading',
+      depth: 1,
+      children: [{ type: 'text', value: 'Hi' }],
+    };
+    const para: Paragraph = {
+      type: 'paragraph',
+      children: [
+        { type: 'text', value: 'A ' },
+        { type: 'emphasis', children: [{ type: 'text', value: 'soft' }] },
+        { type: 'text', value: ' and ' },
+        { type: 'strong', children: [{ type: 'text', value: 'loud' }] },
+        { type: 'text', value: ' word.' },
+      ],
+    };
     expect(renderMarkdown(heading)).toBe('# Hi');
     expect(renderMarkdown(para)).toContain('*soft*');
     expect(renderMarkdown(para)).toContain('**loud**');
@@ -188,7 +200,11 @@ describe('dialect renderMarkdown (edited path)', () => {
 
   it('serialize can render a dirty unit from an mdast node', () => {
     const document = parsed('# Title\n\nBody.\n');
-    const node = fromMarkdown('# Renamed\n').children[0]!;
+    const node: Heading = {
+      type: 'heading',
+      depth: 1,
+      children: [{ type: 'text', value: 'Renamed' }],
+    };
     const units = identityUnits(document);
     units[0] = { origin: 0, markdown: null, node };
     const result = serializeDocument(document, { units });

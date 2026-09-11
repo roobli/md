@@ -1,5 +1,5 @@
 /**
- * Corpus A/B bench: native scanner vs micromark backend.
+ * Corpus A/B bench: native scanner vs legacy micromark entry.
  *
  * Generates synthetic medium/large documents at Noto PROFILE_OPEN orders of
  * magnitude (~512 KiB / ~2 MiB). No private vault content — public lorem shaped
@@ -14,7 +14,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tryNativeSplit } from '../dist/backend/native-scanner.js';
-import { splitWithMicromark } from '../dist/backend/micromark-backend.js';
+import { splitWithMicromark } from '../dist/legacy-micromark.js';
 import { joinSplit } from '../dist/parse.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

@@ -24,8 +24,8 @@ emphasis, math (`singleDollarTextMath: true`), YAML frontmatter.
 
 ## How `@roobli/md` maps
 
-Phase 0+ exports a host-agnostic twin (Phase 1 prefers a native splitter, then
-falls back to micromark — same shapes):
+Phase 0+ exports a host-agnostic twin. Phase 6 default path is **native only**
+(same shapes; mdast `node` is `null` unless the host uses the legacy entry):
 
 - `parseBlocks(text)` ≈ `splitBlocks` (spans + leading/gaps/trailing + nodes)
 - `parseDocument(bytes)` ≈ Noto’s `parseDocument` without Noto’s branded IDs /
@@ -81,3 +81,15 @@ parse. The remaining critical path **is** the full dialect parse.
 
 `@roobli/md` owns making that parse faster (incremental, lazier mdast, or a
 purpose-built block scanner) without breaking the bridge above.
+
+## Recommended next step (post Phase 6)
+
+Open a Noto **adapter PR** that:
+
+1. Depends on `@roobli/md` (MIT) and maps `splitBlocks` → `parseBlocks`.
+2. Routes `replaceMarkdown` middle windows through `reparseBlocks`.
+3. Points single-block / identity saves at `serializeDocument` / `replaceBlock`,
+   comparing `outputBytes` against existing Noto golden fixtures.
+4. Keeps `semanticKey`, branded IDs, sha256, and wire `nodes` in Noto until the
+   engine IR grows; optionally call `@roobli/md/legacy-micromark` only if a
+   temporary mdast `node` attach is needed for wire compatibility.

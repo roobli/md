@@ -21,6 +21,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./legacy-micromark": {
+      "types": "./dist/legacy-micromark.d.ts",
+      "import": "./dist/legacy-micromark.js"
     }
   },
   "scripts": {
@@ -32,16 +36,11 @@
     "bench:ab": "pnpm build && node scripts/bench-ab.mjs"
   },
   "dependencies": {
-    "mdast-util-from-markdown": "^2.0.2",
     "mdast-util-frontmatter": "^2.0.1",
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-math": "^3.0.0",
     "mdast-util-to-markdown": "^2.1.2",
-    "mdast-util-to-markdown-cjk-friendly": "^1.0.0",
-    "micromark-extension-cjk-friendly": "^1.2.3",
-    "micromark-extension-frontmatter": "^2.0.0",
-    "micromark-extension-gfm": "^3.0.0",
-    "micromark-extension-math": "^3.1.0"
+    "mdast-util-to-markdown-cjk-friendly": "^1.0.0"
   },
   "devDependencies": {
     "@types/mdast": "^4.0.4",
@@ -55,5 +54,12 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "optionalDependencies": {
+    "mdast-util-from-markdown": "^2.0.2",
+    "micromark-extension-cjk-friendly": "^1.2.3",
+    "micromark-extension-frontmatter": "^2.0.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-math": "^3.1.0"
   }
 }

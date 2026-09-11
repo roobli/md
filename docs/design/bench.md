@@ -1,6 +1,6 @@
 # Bench — native scanner vs micromark
 
-Synthetic A/B harness: `pnpm bench:ab` → `scripts/bench-ab.mjs`.
+Synthetic A/B harness: `pnpm bench:ab` → `scripts/bench-ab.mjs` (micromark via `@roobli/md/legacy-micromark`).
 
 Corpus shape matches Noto’s `PROFILE_OPEN` / `scripts/bench/corpus.mjs` orders of
 magnitude (medium ≈ 512 KiB, large ≈ 2 MiB): headings, prose, lists, task lists,
@@ -23,7 +23,7 @@ script runs locally.
 
 Noto’s recorded micromark `parseDocument` on similar sizes was ~570 ms medium /
 ~2.3 s large (full open path). This harness times **split only** (native
-`tryNativeSplit` vs `splitWithMicromark`), which is the Phase 3 engine claim.
+`tryNativeSplit` vs legacy `splitWithMicromark`), which is the Phase 3+6 engine claim.
 
 ## Notes
 

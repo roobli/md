@@ -16,16 +16,18 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 5 shipped** — `serializeDocument` / hardened `joinSplit` implement
-Noto-aligned byte-exact saves: untouched spans sliced from source, gaps
-preserved, edited spans via host markdown or `renderMarkdown`. Phase 4
-`reparseBlocks` does incremental / block-local reparse. Phase 3 native scanner
-covers heading / paragraph / list / fenced code / quote / thematic / GFM tables
-/ task lists / **display math** / **YAML frontmatter** / **HTML blocks** /
-**link + footnote definitions**. Synthetic medium/large A/B vs micromark:
-native ~4.5 ms / ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
-[`docs/design/bench.md`](docs/design/bench.md)). Phase 0–4 done.
-Next: Phase 6 (quarantine micromark from the hot path).
+**Phase 6 shipped** — micromark is quarantined from the hot path. Default
+`parseBlocks` / `parseDocument` / `reparseBlocks` / serialize use the native
+scanner only; the Phase 0 backend lives at `@roobli/md/legacy-micromark`.
+Phase 5 `serializeDocument` / hardened `joinSplit` implement Noto-aligned
+byte-exact saves. Phase 3 native scanner covers heading / paragraph / list /
+fenced code / quote / thematic / GFM tables / task lists / **display math** /
+**YAML frontmatter** / **HTML blocks** / **link + footnote definitions**.
+Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
+~14.5 ms vs micromark ~304 ms / ~1.5 s (see
+[`docs/design/bench.md`](docs/design/bench.md)).
+Next: Noto integration spike (adapter PR) or treat `v0.1.0` as the first
+coherent consumer tag.
 
 See:
 
@@ -73,12 +75,29 @@ if (doc.status === "parsed") {
 }
 ```
 
+## Breaking change (Phase 6)
+
+- Default entry **no longer** falls back to micromark. Documents outside the
+  Phase 1–5 native dialect are still scanned natively (best-effort kinds), not
+  bounced to micromark.
+- Direct dependencies on `micromark-extension-*` and `mdast-util-from-markdown`
+  moved to **`optionalDependencies`** (needed only for the legacy entry). The
+  default path still depends on `mdast-util-to-markdown` (+ GFM/math/frontmatter
+  / CJK to-markdown helpers) for `renderMarkdown` on edited blocks — those pull
+  some micromark-*util* packages transitively, but the **micromark parser is
+  not called** on open / reparse / serialize of pristine spans.
+- Compatibility import:
+
+```ts
+import { splitWithMicromark } from "@roobli/md/legacy-micromark";
+```
+
 ## Scripts
 
 ```
 pnpm install
 pnpm verify   # typecheck + test + build
-pnpm bench:ab # synthetic medium/large native vs micromark
+pnpm bench:ab # synthetic medium/large native vs @roobli/md/legacy-micromark
 ```
 
 ## License
