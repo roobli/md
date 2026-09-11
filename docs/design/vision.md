@@ -45,9 +45,10 @@ See [`roadmap.md`](./roadmap.md) for the full table. Short form:
 | Phase | Focus |
 | ----- | ----- |
 | **0** (done) | API + micromark behind `// replace` |
-| **1** (now) | Native splitter + offsets (heading/paragraph/list/fence/…) |
-| **2** | GFM tables + task lists natively |
-| **3+** | Math/frontmatter/CJK, incremental reparse, serialize, drop hot-path micromark |
+| **1** (done) | Native splitter + offsets (heading/paragraph/list/fence/…) |
+| **2** (done) | GFM tables + task lists natively |
+| **3** (done) | Math / frontmatter / HTML / defs + synthetic A/B bench |
+| **4+** | Incremental reparse, serialize, drop hot-path micromark |
 
 ## Success metric
 

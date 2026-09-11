@@ -71,8 +71,8 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **0** (done) | Package + docs + API; micromark behind `// replace` |
 | **1** (done slice) | Native block splitter + offsets (heading/paragraph/list/fence/quote/thematic); micromark fallback for unknown |
 | **2** (done) | Native GFM tables + task lists |
-| **3** | Math, frontmatter, HTML/defs, CJK parity; optional semantic keys |
-| **4** | Incremental / block-local reparse; streaming first-paint hooks |
+| **3** (done) | Native math / frontmatter / HTML / defs + synthetic A/B bench |
+| **4** (next) | Incremental / block-local reparse; streaming first-paint hooks |
 | **5** | Serialize dialect aligned with Noto’s byte-exact save rules |
 | **6** | Quarantine micromark from the hot path; mdast optional |
 

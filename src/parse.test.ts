@@ -3,10 +3,10 @@ import { tryNativeSplit } from './backend/native-scanner.js';
 import { joinSplit, parseBlocks, parseDocument, parseSingleBlock } from './parse.js';
 
 describe('parseBlocks', () => {
-  it('covers every character exactly once (micromark fallback path)', () => {
+  it('covers every character exactly once on the native Phase 3 path', () => {
     const text = '---\ntitle: t\n---\n\n# Hello\n\nPara with **注意：**强调\n\n- [ ] task\n\n$$\nx\n$$\n';
+    expect(tryNativeSplit(text)).not.toBeNull();
     const split = parseBlocks(text);
-    expect(tryNativeSplit(text)).toBeNull(); // forces micromark
     expect(joinSplit(split)).toBe(text);
     expect(split.spans.length).toBeGreaterThanOrEqual(4);
     const kinds = split.spans.map((s) => s.kind);
@@ -14,6 +14,7 @@ describe('parseBlocks', () => {
     expect(kinds).toContain('heading');
     expect(kinds).toContain('task-list');
     expect(kinds).toContain('display-math');
+    expect(split.spans.every((s) => s.node === null)).toBe(true);
   });
 
   it('uses native path for heading/paragraph/list/fence', () => {
@@ -40,6 +41,14 @@ describe('parseBlocks', () => {
     const split = parseBlocks(text);
     expect(joinSplit(split)).toBe(text);
     expect(split.spans.map((s) => s.kind)).toEqual(['task-list']);
+  });
+
+  it('uses native path for HTML and definitions', () => {
+    const text = '<div>\nx\n</div>\n\n[ref]: https://ex.com\n\n[^a]: note\n';
+    expect(tryNativeSplit(text)).not.toBeNull();
+    const split = parseBlocks(text);
+    expect(joinSplit(split)).toBe(text);
+    expect(split.spans.map((s) => s.kind)).toEqual(['html', 'link-definition', 'footnote-definition']);
   });
 
   it('blank document is all trailing', () => {

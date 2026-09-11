@@ -16,16 +16,20 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 2 shipped** — native block scanner covers heading / paragraph / list /
-fenced code / quote / thematic break / **GFM tables** / **task lists**, with
-exact offsets. Micromark remains the fallback for display math, YAML
-frontmatter, HTML blocks, and link/footnote definitions. Phase 0–1 done.
-Next: Phase 3 (math + frontmatter + HTML/defs).
+**Phase 3 shipped** — native block scanner covers heading / paragraph / list /
+fenced code / quote / thematic break / GFM tables / task lists / **display
+math** / **YAML frontmatter** / **HTML blocks** / **link + footnote
+definitions**, with exact offsets. Whole-doc micromark fallback is no longer
+triggered for that dialect. Synthetic medium/large A/B vs micromark: native
+~4.5 ms / ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
+[`docs/design/bench.md`](docs/design/bench.md)). Phase 0–2 done.
+Next: Phase 4 (incremental / block-local reparse).
 
 See:
 
 - [`docs/design/vision.md`](docs/design/vision.md) — product goal
 - [`docs/design/roadmap.md`](docs/design/roadmap.md) — phased plan
+- [`docs/design/bench.md`](docs/design/bench.md) — native vs micromark numbers
 - [`docs/design/typora-notes.md`](docs/design/typora-notes.md) — Typora study (interop research)
 - [`docs/design/noto-bridge.md`](docs/design/noto-bridge.md) — how this plugs into Noto v3
 - [`docs/design/contract-v0.md`](docs/design/contract-v0.md) — engine contract sketch
@@ -56,6 +60,7 @@ if (doc.status === "parsed") {
 ```
 pnpm install
 pnpm verify   # typecheck + test + build
+pnpm bench:ab # synthetic medium/large native vs micromark
 ```
 
 ## License

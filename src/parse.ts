@@ -31,9 +31,10 @@ function decodeUtf8(bytes: Uint8Array): string | null {
 /**
  * Split markdown source into top-level blocks with exact offsets.
  *
- * Phase 1–2: try the native scanner first (heading / paragraph / list / fence /
- * quote / thematic / setext / GFM table / task list). Fall back to micromark for
- * display math, frontmatter, HTML, definitions, etc.
+ * Phase 1–3: prefer the native scanner (heading / paragraph / list / fence /
+ * quote / thematic / setext / GFM table / task list / display math / YAML
+ * frontmatter / HTML / link+footnote definitions). Micromark remains a
+ * compatibility fallback if native ever returns null.
  *
  * // replace — custom engine grows inside `native-scanner.ts`; micromark stays
  * the compatibility backend until Phase 6.

@@ -123,10 +123,93 @@ describe('tryNativeSplit', () => {
     expect(split!.spans[2]!.end).toBe(44);
   });
 
-  it('falls back (null) for frontmatter, math, html, definitions', () => {
-    expect(tryNativeSplit('---\ntitle: t\n---\n\nHi\n')).toBeNull();
-    expect(tryNativeSplit('$$\nx\n$$\n')).toBeNull();
-    expect(tryNativeSplit('<div>\nHi\n</div>\n')).toBeNull();
-    expect(tryNativeSplit('[id]: https://example.com\n')).toBeNull();
+  it('natively splits YAML frontmatter with exact offsets', () => {
+    const text = '---\ntitle: t\nauthor: a\n---\n\nHi\n';
+    const split = tryNativeSplit(text);
+    expect(split).not.toBeNull();
+    expect(joinSplit(split!)).toBe(text);
+    expect(split!.spans.map((s) => s.kind)).toEqual(['frontmatter', 'paragraph']);
+    expect(split!.spans[0]!.start).toBe(0);
+    expect(split!.spans[0]!.end).toBe('---\ntitle: t\nauthor: a\n---'.length);
+    expect(split!.spans[0]!.markdown).toBe('---\ntitle: t\nauthor: a\n---');
+    expect(split!.spans[0]!.node).toBeNull();
+  });
+
+  it('natively splits display math $$ with exact offsets', () => {
+    const text = '$$\n\\sum_i x_i\n$$\n\nAfter\n';
+    const split = tryNativeSplit(text);
+    expect(split).not.toBeNull();
+    expect(joinSplit(split!)).toBe(text);
+    expect(split!.spans.map((s) => s.kind)).toEqual(['display-math', 'paragraph']);
+    expect(split!.spans[0]!.start).toBe(0);
+    expect(split!.spans[0]!.end).toBe('$$\n\\sum_i x_i\n$$'.length);
+    expect(split!.spans[0]!.node).toBeNull();
+    // Same-line $$…$$ stays a paragraph (inline), not display-math.
+    const inline = tryNativeSplit('$$x = 1$$\n');
+    expect(inline!.spans.map((s) => s.kind)).toEqual(['paragraph']);
+  });
+
+  it('natively splits HTML blocks (type 1/2/6/7) with exact offsets', () => {
+    const div = '<div>\nHi\n</div>\n\nAfter\n';
+    const divSplit = tryNativeSplit(div);
+    expect(divSplit).not.toBeNull();
+    expect(joinSplit(divSplit!)).toBe(div);
+    expect(divSplit!.spans.map((s) => s.kind)).toEqual(['html', 'paragraph']);
+    expect(divSplit!.spans[0]!.markdown).toBe('<div>\nHi\n</div>');
+    expect(divSplit!.spans[0]!.start).toBe(0);
+    expect(divSplit!.spans[0]!.end).toBe('<div>\nHi\n</div>'.length);
+
+    const comment = '<!-- c\nspanning\n-->\n';
+    const commentSplit = tryNativeSplit(comment);
+    expect(commentSplit!.spans[0]!.kind).toBe('html');
+    expect(commentSplit!.spans[0]!.markdown).toBe('<!-- c\nspanning\n-->');
+
+    const script = '<script>\nalert(1)\n</script>\n';
+    expect(tryNativeSplit(script)!.spans[0]!.kind).toBe('html');
+
+    // Type 7 continues until blank line.
+    const br = '<br/>\nHi\n';
+    const brSplit = tryNativeSplit(br);
+    expect(brSplit!.spans).toHaveLength(1);
+    expect(brSplit!.spans[0]!.kind).toBe('html');
+    expect(brSplit!.spans[0]!.markdown).toBe('<br/>\nHi');
+  });
+
+  it('natively splits link and footnote definitions with exact offsets', () => {
+    const link = '[id]: https://example.com\n\nUse [id]\n';
+    const linkSplit = tryNativeSplit(link);
+    expect(linkSplit).not.toBeNull();
+    expect(joinSplit(linkSplit!)).toBe(link);
+    expect(linkSplit!.spans.map((s) => s.kind)).toEqual(['link-definition', 'paragraph']);
+    expect(linkSplit!.spans[0]!.start).toBe(0);
+    expect(linkSplit!.spans[0]!.end).toBe('[id]: https://example.com'.length);
+    expect(linkSplit!.spans[0]!.node).toBeNull();
+
+    const titled = '[foo]: /url\n  "title"\n';
+    const titledSplit = tryNativeSplit(titled);
+    expect(titledSplit!.spans[0]!.kind).toBe('link-definition');
+    expect(titledSplit!.spans[0]!.markdown).toBe('[foo]: /url\n  "title"');
+
+    const fn = '[^note]: line1\n  line2\n\nPara\n';
+    const fnSplit = tryNativeSplit(fn);
+    expect(fnSplit!.spans.map((s) => s.kind)).toEqual(['footnote-definition', 'paragraph']);
+    expect(fnSplit!.spans[0]!.markdown).toBe('[^note]: line1\n  line2');
+  });
+
+  it('handles frontmatter + math + html + defs in one native pass', () => {
+    const text =
+      '---\ntitle: t\n---\n\n# H\n\n$$\na+b\n$$\n\n<div>\nx\n</div>\n\n[ref]: https://ex.com\n\n[^a]: note\n';
+    const split = tryNativeSplit(text);
+    expect(split).not.toBeNull();
+    expect(joinSplit(split!)).toBe(text);
+    expect(split!.spans.map((s) => s.kind)).toEqual([
+      'frontmatter',
+      'heading',
+      'display-math',
+      'html',
+      'link-definition',
+      'footnote-definition',
+    ]);
+    expect(split!.spans.every((s) => s.node === null)).toBe(true);
   });
 });
