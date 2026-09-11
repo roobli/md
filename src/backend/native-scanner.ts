@@ -1,12 +1,12 @@
 /**
- * Phase 1 native block scanner.
+ * Native block scanner (Phase 1–2).
  *
- * Recognizes a CommonMark-ish subset with exact character offsets, without
- * calling micromark. Constructs outside the subset return `null` so
- * `parseBlocks` can fall back to the micromark backend.
+ * Recognizes a CommonMark-ish subset plus GFM tables and task lists with exact
+ * character offsets, without calling micromark. Constructs outside the subset
+ * return `null` so `parseBlocks` can fall back to the micromark backend.
  *
  * Beats a blank-line-naive splitter: fenced code keeps internal blank lines;
- * tight/loose lists stay one block across inter-item blanks.
+ * tight/loose lists (and task lists) stay one block across inter-item blanks.
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -140,7 +140,16 @@ function looksLikeTable(lines: Line[], index: number): boolean {
   const next = lines[index + 1];
   if (!next) return false;
   // GFM delimiter row: | --- | --- |  or  ---|---  or  | - | - |
-  return /^\s*\|?[:| \t-]+\|[:| \t-]*$/.test(next.content) && /-/.test(next.content);
+  return isTableDelimiter(next.content);
+}
+
+function isTableDelimiter(content: string): boolean {
+  return /^\s*\|?[:| \t-]+\|[:| \t-]*$/.test(content) && /-/.test(content);
+}
+
+/** Body/header row: must contain a pipe (GFM). */
+function isTableRow(content: string): boolean {
+  return content.includes('|');
 }
 
 function looksLikeHtmlBlock(content: string): boolean {
@@ -159,7 +168,7 @@ function looksLikeFrontmatterOpen(content: string, atDocStart: boolean): boolean
   return atDocStart && /^---\s*$/.test(content);
 }
 
-/** True when this document needs micromark (Phase 2+ constructs). */
+/** True when this document needs micromark (Phase 3+ constructs). */
 function needsFallback(lines: Line[]): string | null {
   for (let i = 0; i < lines.length; i += 1) {
     const content = lines[i]!.content;
@@ -167,8 +176,6 @@ function needsFallback(lines: Line[]): string | null {
     if (looksLikeDisplayMath(content)) return 'display-math';
     if (looksLikeHtmlBlock(content)) return 'html';
     if (looksLikeLinkOrFootnoteDef(content)) return 'definition';
-    if (isTaskListItem(content)) return 'task-list';
-    if (looksLikeTable(lines, i)) return 'table';
   }
   return null;
 }
@@ -224,7 +231,7 @@ function spansToSplit(text: string, raw: { kind: BlockKind; start: number; end: 
 
 /**
  * Try a native split. Returns `null` when the document contains constructs the
- * Phase 1 scanner does not own yet (tables, tasks, math, frontmatter, …).
+ * scanner does not own yet (display math, frontmatter, HTML, link/footnote defs).
  */
 export function tryNativeSplit(text: string): SplitDocument | null {
   if (text.length === 0) {
@@ -304,9 +311,32 @@ export function tryNativeSplit(text: string): SplitDocument | null {
       continue;
     }
 
-    // Lists (bullet / ordered) — keep loose lists as one block
+    // GFM table: header + delimiter + optional body rows
+    if (looksLikeTable(lines, i)) {
+      const start = line.start;
+      let j = i + 2; // header + delimiter consumed
+      while (j < lines.length) {
+        const next = lines[j]!;
+        if (isBlank(next.content)) break;
+        if (!isTableRow(next.content)) break;
+        // Stop before other block structures (fence, heading, list, …)
+        if (fenceOpen(next.content)) break;
+        if (isAtxHeading(next.content)) break;
+        if (isThematicBreak(next.content) && !isTableDelimiter(next.content)) break;
+        if (isBlockQuote(next.content)) break;
+        if (isListItem(next.content)) break;
+        j += 1;
+      }
+      const end = lines[j - 1]!.next;
+      raw.push({ kind: 'table', start, end });
+      i = j;
+      continue;
+    }
+
+    // Lists (bullet / ordered / task) — keep loose lists as one block
     if (isListItem(line.content)) {
       const ordered = orderedMarker(line.content) !== null;
+      let hasTask = isTaskListItem(line.content);
       const start = line.start;
       let j = i + 1;
       while (j < lines.length) {
@@ -315,6 +345,7 @@ export function tryNativeSplit(text: string): SplitDocument | null {
           // Mismatched bullet vs ordered → stop (new block)
           const nextOrdered = orderedMarker(next.content) !== null;
           if (nextOrdered !== ordered) break;
+          if (isTaskListItem(next.content)) hasTask = true;
           j += 1;
           continue;
         }
@@ -324,6 +355,7 @@ export function tryNativeSplit(text: string): SplitDocument | null {
           if (k < lines.length && isListItem(lines[k]!.content)) {
             const nextOrdered = orderedMarker(lines[k]!.content) !== null;
             if (nextOrdered !== ordered) break;
+            if (isTaskListItem(lines[k]!.content)) hasTask = true;
             j = k;
             continue;
           }
@@ -337,7 +369,8 @@ export function tryNativeSplit(text: string): SplitDocument | null {
         break;
       }
       const end = lines[j - 1]!.next;
-      raw.push({ kind: ordered ? 'ordered-list' : 'bullet-list', start, end });
+      const kind = hasTask ? 'task-list' : ordered ? 'ordered-list' : 'bullet-list';
+      raw.push({ kind, start, end });
       i = j;
       continue;
     }

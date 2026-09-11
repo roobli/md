@@ -16,11 +16,11 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 1 vertical slice shipped** — native block scanner for heading /
-paragraph / list / fenced code / quote / thematic break, with exact offsets;
-micromark remains the fallback for GFM tables, tasks, math, frontmatter, and
-friends. Phase 0 scaffold (API + micromark behind `// replace`) is done.
-Next: Phase 2 (native GFM tables + task lists).
+**Phase 2 shipped** — native block scanner covers heading / paragraph / list /
+fenced code / quote / thematic break / **GFM tables** / **task lists**, with
+exact offsets. Micromark remains the fallback for display math, YAML
+frontmatter, HTML blocks, and link/footnote definitions. Phase 0–1 done.
+Next: Phase 3 (math + frontmatter + HTML/defs).
 
 See:
 

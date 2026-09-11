@@ -24,11 +24,22 @@ describe('parseBlocks', () => {
     expect(split.spans.map((s) => s.kind)).toEqual(['heading', 'paragraph', 'fenced-code', 'bullet-list']);
   });
 
-  it('classifies GFM table and strikethrough paragraph via micromark', () => {
+  it('uses native path for GFM tables; strikethrough stays inline in paragraphs', () => {
     const text = '| a | b |\n| - | - |\n| 1 | 2 |\n\n~~gone~~\n';
+    expect(tryNativeSplit(text)).not.toBeNull();
     const split = parseBlocks(text);
     expect(joinSplit(split)).toBe(text);
-    expect(split.spans.some((s) => s.kind === 'table')).toBe(true);
+    expect(split.spans.map((s) => s.kind)).toEqual(['table', 'paragraph']);
+    expect(split.spans[0]!.node).toBeNull();
+    expect(split.spans[1]!.markdown).toBe('~~gone~~');
+  });
+
+  it('uses native path for task lists', () => {
+    const text = '- [ ] todo\n- [x] done\n';
+    expect(tryNativeSplit(text)).not.toBeNull();
+    const split = parseBlocks(text);
+    expect(joinSplit(split)).toBe(text);
+    expect(split.spans.map((s) => s.kind)).toEqual(['task-list']);
   });
 
   it('blank document is all trailing', () => {
