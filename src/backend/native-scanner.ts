@@ -451,7 +451,12 @@ export function tryNativeSplit(text: string): SplitDocument {
       continue;
     }
 
-    // Block quote
+    // Block quote.
+    // CommonMark: a blank line without a `>` marker ends the quote, so
+    //   > a\n\n> b
+    // is two quotes (ex. 231). Marker-only blank lines (`>` / `> `) stay
+    // inside one quote. Do not merge across unprefixed blanks (Noto #37 /
+    // tight adjacent quotes+callouts).
     if (isBlockQuote(line.content)) {
       const start = line.start;
       let j = i + 1;
@@ -460,15 +465,6 @@ export function tryNativeSplit(text: string): SplitDocument {
         if (isBlockQuote(next.content)) {
           j += 1;
           continue;
-        }
-        if (isBlank(next.content)) {
-          let k = j + 1;
-          while (k < lines.length && isBlank(lines[k]!.content)) k += 1;
-          if (k < lines.length && isBlockQuote(lines[k]!.content)) {
-            j = k;
-            continue;
-          }
-          break;
         }
         break;
       }

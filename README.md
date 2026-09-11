@@ -26,8 +26,8 @@ fenced code / quote / thematic / GFM tables / task lists / **display math** /
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-Next: Noto integration spike (adapter PR) or treat `v0.1.0` as the first
-coherent consumer tag.
+**v0.1.1** — native quote split matches CommonMark tight adjacent quotes/callouts
+(no merge across unprefixed blanks). Noto pins `github:roobli/md#v0.1.1`.
 
 See:
 

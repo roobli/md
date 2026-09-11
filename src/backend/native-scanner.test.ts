@@ -135,7 +135,28 @@ describe('tryNativeSplit', () => {
     expect(split!.spans[0]!.node).toBeNull();
   });
 
-  it('natively splits display math $$ with exact offsets', () => {
+  it('splits tight adjacent quotes across an unprefixed blank (CommonMark ex. 231)', () => {
+    const text = '> 普通引用\n> second line\n\n> [!NOTE]\n> 显式 callout\n';
+    const split = tryNativeSplit(text);
+    expect(split).not.toBeNull();
+    expect(joinSplit(split!)).toBe(text);
+    expect(split!.spans.map((s) => s.kind)).toEqual(['quote', 'quote']);
+    expect(split!.spans[0]!.markdown).toBe('> 普通引用\n> second line');
+    expect(split!.spans[1]!.markdown).toBe('> [!NOTE]\n> 显式 callout');
+    expect(split!.gaps).toEqual(['\n\n']);
+  });
+
+  it('keeps one quote when blank lines carry the > marker', () => {
+    const text = '> foo\n>\n> bar\n';
+    const split = tryNativeSplit(text);
+    expect(split).not.toBeNull();
+    expect(joinSplit(split!)).toBe(text);
+    expect(split!.spans).toHaveLength(1);
+    expect(split!.spans[0]!.kind).toBe('quote');
+    expect(split!.spans[0]!.markdown).toBe('> foo\n>\n> bar');
+  });
+
+    it('natively splits display math $$ with exact offsets', () => {
     const text = '$$\n\\sum_i x_i\n$$\n\nAfter\n';
     const split = tryNativeSplit(text);
     expect(split).not.toBeNull();
