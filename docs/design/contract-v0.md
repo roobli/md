@@ -115,8 +115,9 @@ Dialect hypothesis (verify on bridge): bullet `-`, emphasis/strong `*`, fenced
 backticks, `listItemIndent: 'one'`, GFM `tablePipeAlign: false`, pair-only
 tilde strike, math + YAML frontmatter, CJK to-markdown. **Phase 7**: engine
 owns hard-break-as-two-spaces and list-marker-from-node (`node.data.bullet` /
-`node.data.delimiter`). Noto / host still owns wiki-link verbatim runs and
-bare autolink shape until those handlers move.
+`node.data.delimiter`). **Phase 8**: engine owns verbatim runs (wiki links,
+alerts, footnotes, `[TOC]`, snake_case / metrics) and bare http(s) autolink
+shape (previously host-owned in Noto).
 
 ## Correctness goals
 

@@ -12,10 +12,8 @@
  * - CJK-friendly to-markdown so Chinese flanking is not numeric-escaped.
  * - Hard breaks as two trailing spaces (not backslash); list marker /
  *   ordered delimiter from `node.data` when present (Phase 7).
- *
- * Noto still owns wiki-link verbatim runs and bare autolink shape until the
- * bridge copies those handlers. Hosts that need those exact bytes for an
- * *edited* block should keep supplying the markdown string themselves.
+ * - Verbatim runs (wiki links, alerts, footnotes, `[TOC]`, snake_case, …)
+ *   and bare http(s) autolinks (Phase 8) — previously host-owned in Noto.
  */
 
 import {
@@ -93,6 +91,109 @@ const listMarkerFromNode: ToMarkdownOptions = {
   },
 };
 
+/**
+ * A word character for CommonMark's flanking rules: letters, digits, and CJK
+ * ideographs. Spelled out rather than as a unicode property (no unicode flag).
+ */
+const WORD = `[0-9A-Za-z\u00C0-\u024F\u3400-\u4DBF\u4E00-\u9FFF]`;
+
+/**
+ * Runs the serializer must emit exactly as they are (wiki links, alerts,
+ * footnotes, `[TOC]`, snake_case identifiers, metrics like `NDCG@10`, lone
+ * stars glued to words). All begin with characters the default serializer
+ * escapes "just in case"; escaping them stops them being what they say.
+ */
+const VERBATIM_RUN = new RegExp(
+  [
+    '\\[\\[[^[\\]\\n|]+(?:\\|[^[\\]\\n]*)?\\]\\]',
+    '\\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\\]',
+    '==[^=\\n]+==',
+    '\\[\\^[^\\]\\s]+\\]',
+    '\\[[Tt][Oo][Cc]\\]',
+    `${WORD}+(?:_+${WORD}+)+`,
+    `${WORD}+@${WORD}+`,
+    `\\*[A-Za-z][A-Za-z0-9.+_-]*`,
+  ].join('|'),
+  'g',
+);
+
+/**
+ * A URL written on its own stays written on its own (not `<url>`).
+ * Only unambiguous http(s) addresses that GFM would keep bare.
+ */
+const BARE_URL = /^https?:\/\/[^\s<>]*[^\s<>.,:;!?)\]]$/;
+
+const bareAutolink: ToMarkdownOptions = {
+  handlers: {
+    link(node, parent, state, info) {
+      const [only] = node.children;
+      if (
+        node.children.length === 1
+        && only?.type === 'text'
+        && only.value === node.url
+        && (node.title === null || node.title === undefined)
+        && BARE_URL.test(node.url)
+      ) {
+        return node.url;
+      }
+      return defaultHandlers.link(node, parent, state, info);
+    },
+  },
+};
+
+function emitWithVerbatimRuns(
+  value: string,
+  state: { safe: (value: string, info: { before: string; after: string }) => string },
+  info: { before: string; after: string },
+): string {
+  VERBATIM_RUN.lastIndex = 0;
+  if (!VERBATIM_RUN.test(value)) return state.safe(value, info);
+
+  VERBATIM_RUN.lastIndex = 0;
+  let out = '';
+  let last = 0;
+  for (;;) {
+    const match = VERBATIM_RUN.exec(value);
+    if (match === null) break;
+    if (match.index > last) {
+      out += state.safe(value.slice(last, match.index), {
+        ...info,
+        before: last === 0 ? info.before : ']',
+        after: '[',
+      });
+    }
+    out += match[0];
+    last = match.index + match[0].length;
+  }
+  if (last < value.length) {
+    out += state.safe(value.slice(last), { ...info, before: ']' });
+  }
+  return out;
+}
+
+const verbatimRunsInText: ToMarkdownOptions = {
+  handlers: {
+    text(node, _parent, state, info) {
+      return emitWithVerbatimRuns(node.value, state, info);
+    },
+    image(node, parent, state, info) {
+      if (!node.alt) return defaultHandlers.image(node, parent, state, info);
+      const original = state.safe.bind(state);
+      state.safe = ((value: string, safeInfo: { before: string; after: string }) => {
+        if (safeInfo.after === ']' && safeInfo.before.endsWith('![')) {
+          return emitWithVerbatimRuns(value, { safe: original }, safeInfo);
+        }
+        return original(value, safeInfo);
+      }) as typeof state.safe;
+      try {
+        return defaultHandlers.image(node, parent, state, info);
+      } finally {
+        state.safe = original;
+      }
+    },
+  },
+};
+
 const serializerOptions: ToMarkdownOptions = {
   bullet: '-',
   emphasis: EMPHASIS_MARKER,
@@ -108,7 +209,9 @@ const serializerOptions: ToMarkdownOptions = {
     tildeOnlyInPairs(gfmToMarkdown({ tablePipeAlign: false })),
     mathToMarkdown(),
     frontmatterToMarkdown(),
+    verbatimRunsInText,
     listMarkerFromNode,
+    bareAutolink,
     hardBreakAsTwoSpaces,
   ],
 };
