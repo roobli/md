@@ -16,9 +16,10 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 7 shipped** — serialize dialect parity for hard-break (two trailing
-spaces) and list marker / ordered delimiter from `node.data`. Wiki-link
-verbatim and bare autolink still stay with the host until ported.
+**Phase 8 shipped** — serialize dialect verbatim runs (wiki links, alerts,
+footnotes, `[TOC]`, snake_case / metrics) and bare http(s) autolinks, matching
+Noto’s host handlers. **Phase 7** — hard-break (two trailing spaces) and list
+marker / ordered delimiter from `node.data`.
 **Phase 6** — micromark quarantined from the hot path; legacy entry
 `@roobli/md/legacy-micromark`. Phase 5 `serializeDocument` / hardened
 `joinSplit` implement Noto-aligned byte-exact saves. Phase 3 native scanner
@@ -28,9 +29,9 @@ thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.3** — dialect serialize parity (hard-break + list-marker). **v0.1.2**
-native indented-code; **v0.1.1** quote/callout split. Noto may pin
-`github:roobli/md#v0.1.3` when ready.
+**v0.1.4** — verbatim runs + bare autolink. **v0.1.3** hard-break + list-marker;
+**v0.1.2** native indented-code; **v0.1.1** quote/callout split. Noto may pin
+`github:roobli/md#v0.1.4` when ready.
 
 See:
 

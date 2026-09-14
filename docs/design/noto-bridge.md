@@ -61,8 +61,9 @@ Noto integration path (later):
 5. **Serialize adoption steps**
    - Switch identity / single-block save tests to `@roobli/md` `serializeDocument`
      and compare `outputBytes` against today’s Noto golden fixtures.
-   - Point edited-block rendering at `renderMarkdown` once wiki-link / list-marker
-     / hard-break handlers are ported (or keep Noto `syntax.ts` render until then).
+   - Point edited-block rendering at `renderMarkdown` (Phase 7–8 ported
+     hard-break, list-marker, verbatim runs, bare autolink) or keep Noto
+     `syntax.ts` render until the flagged path is default-on.
    - Retire duplicate gap/slice logic in Noto `serialize.ts` when the engine path
      matches preserved-range evidence the store expects.
    - Leave `source` mode (full-file replace) in Noto — it is a host escape hatch.

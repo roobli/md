@@ -13,7 +13,8 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **4** | **Done** | **Incremental / block-local reparse** (`reparseBlocks` + edit range / replaced ordinals). Streaming / first-paint remains a host concern (parse a prefix with `parseBlocks`). |
 | **5** | **Done** | **Serialize** dialect aligned with Noto’s byte-exact save rules (untouched spans sliced, not re-emitted). |
 | **6** | **Done** | Quarantine micromark from the hot path; legacy entry `@roobli/md/legacy-micromark`; mdast `node` optional on native path. |
-| **7** | **Done** | Serialize dialect parity: hard-break → two trailing spaces; list marker / ordered delimiter from `node.data`. Wiki-link verbatim + bare autolink remain host-owned. |
+| **7** | **Done** | Serialize dialect parity: hard-break → two trailing spaces; list marker / ordered delimiter from `node.data`. |
+| **8** | **Done** | Serialize dialect: verbatim runs (wiki / alert / footnote / TOC / snake_case / metrics) + bare http(s) autolink — previously host-owned in Noto. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -102,7 +103,19 @@ indented-code** (v0.1.2).
 - [x] Tests in `src/dialect.test.ts` (hard break, star bullet, `)` delimiter)
 - [x] Contract + README + roadmap updated; package `0.1.3`
 
-Phase 7 **shipped** on `main` (v0.1.3). Remaining optional engine work:
-line-prefix offset alignment, more Typora interop notes, or wiki-link /
-bare-autolink dialect handlers (still host-owned). Noto host adoption
-(default-on adapter + `reparseBlocks` in `replaceMarkdown`) stays separate.
+Phase 7 **shipped** on `main` (v0.1.3).
+
+## Phase 8 acceptance
+
+- [x] `verbatimRunsInText`: wiki `[[…]]`, alerts, footnotes, `[TOC]`, snake_case,
+      metrics (`NDCG@10`), lone `*nix`-style stars; image alt uses the same runs
+- [x] `bareAutolink`: self-labelled http(s) links emit bare URL, not `<url>`
+- [x] Wired into `serializerOptions.extensions` in `src/dialect.ts`
+- [x] Tests in `src/dialect.test.ts` (wiki, alert/footnote/TOC, snake_case,
+      image alt, bare vs labelled link)
+- [x] Contract + README + roadmap updated; package `0.1.4`
+
+Phase 8 **shipped** on `main` (v0.1.4). Remaining optional engine work:
+line-prefix offset alignment, table delimiter widening (vault three-dash
+style), more Typora interop notes. Noto host adoption (default-on adapter +
+`reparseBlocks` in `replaceMarkdown`) stays separate.
