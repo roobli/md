@@ -113,9 +113,10 @@ Byte-exact rules (aligned with Noto `serialize.ts`):
 
 Dialect hypothesis (verify on bridge): bullet `-`, emphasis/strong `*`, fenced
 backticks, `listItemIndent: 'one'`, GFM `tablePipeAlign: false`, pair-only
-tilde strike, math + YAML frontmatter, CJK to-markdown. Noto still owns
-wiki-link verbatim runs, list-marker-from-node, and hard-break-as-two-spaces
-until those handlers move.
+tilde strike, math + YAML frontmatter, CJK to-markdown. **Phase 7**: engine
+owns hard-break-as-two-spaces and list-marker-from-node (`node.data.bullet` /
+`node.data.delimiter`). Noto / host still owns wiki-link verbatim runs and
+bare autolink shape until those handlers move.
 
 ## Correctness goals
 
@@ -153,6 +154,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **4** (done) | Incremental / block-local reparse (`reparseBlocks`); streaming first-paint left to host |
 | **5** (done) | Serialize dialect aligned with Noto’s byte-exact save rules |
 | **6** (done) | Quarantine micromark; `@roobli/md/legacy-micromark`; mdast optional |
+| **7** (done) | Serialize dialect parity: hard-break → two spaces; list marker/delimiter from `node.data` |
 
 ## Replace boundary
 

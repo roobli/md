@@ -13,6 +13,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **4** | **Done** | **Incremental / block-local reparse** (`reparseBlocks` + edit range / replaced ordinals). Streaming / first-paint remains a host concern (parse a prefix with `parseBlocks`). |
 | **5** | **Done** | **Serialize** dialect aligned with Noto’s byte-exact save rules (untouched spans sliced, not re-emitted). |
 | **6** | **Done** | Quarantine micromark from the hot path; legacy entry `@roobli/md/legacy-micromark`; mdast `node` optional on native path. |
+| **7** | **Done** | Serialize dialect parity: hard-break → two trailing spaces; list marker / ordered delimiter from `node.data`. Wiki-link verbatim + bare autolink remain host-owned. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -91,7 +92,17 @@ remain a host concern until the engine’s IR is stable.
 - [x] Document dependency / entry breaking change honestly
 
 Phase 6 **shipped** on `main`. Post–Phase 6 construct polish: **native
-indented-code** (v0.1.2). Noto already has a default-off adapter spike; next
-engine-side work is optional (line-prefix offset alignment, more Typora
-interop notes) or host adoption (default-on + `reparseBlocks` in
-`replaceMarkdown`).
+indented-code** (v0.1.2).
+
+## Phase 7 acceptance
+
+- [x] `break` handler: default `\\n` → two-space hard break (`  \n`); other forms preserved
+- [x] `list` handler: `node.data.bullet` (`*`/`+`/`-`) and ordered `node.data.delimiter` (`.`/`)`) temporarily set serializer options
+- [x] Wired into `serializerOptions.extensions` in `src/dialect.ts`
+- [x] Tests in `src/dialect.test.ts` (hard break, star bullet, `)` delimiter)
+- [x] Contract + README + roadmap updated; package `0.1.3`
+
+Phase 7 **shipped** on `main` (v0.1.3). Remaining optional engine work:
+line-prefix offset alignment, more Typora interop notes, or wiki-link /
+bare-autolink dialect handlers (still host-owned). Noto host adoption
+(default-on adapter + `reparseBlocks` in `replaceMarkdown`) stays separate.

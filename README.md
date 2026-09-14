@@ -16,20 +16,21 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 6 shipped** — micromark is quarantined from the hot path. Default
-`parseBlocks` / `parseDocument` / `reparseBlocks` / serialize use the native
-scanner only; the Phase 0 backend lives at `@roobli/md/legacy-micromark`.
-Phase 5 `serializeDocument` / hardened `joinSplit` implement Noto-aligned
-byte-exact saves. Phase 3 native scanner covers heading / paragraph / list /
-fenced code / **indented code** / quote / thematic / GFM tables / task lists /
-**display math** / **YAML frontmatter** / **HTML blocks** / **link + footnote
-definitions**.
+**Phase 7 shipped** — serialize dialect parity for hard-break (two trailing
+spaces) and list marker / ordered delimiter from `node.data`. Wiki-link
+verbatim and bare autolink still stay with the host until ported.
+**Phase 6** — micromark quarantined from the hot path; legacy entry
+`@roobli/md/legacy-micromark`. Phase 5 `serializeDocument` / hardened
+`joinSplit` implement Noto-aligned byte-exact saves. Phase 3 native scanner
+covers heading / paragraph / list / fenced code / **indented code** / quote /
+thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
+**HTML blocks** / **link + footnote definitions**.
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.2** — native **indented-code** (CommonMark ≥4 spaces / tab; internal blanks
-kept; does not interrupt paragraphs). **v0.1.1** quote/callout split parity
-remains. Noto may pin `github:roobli/md#v0.1.2` when ready.
+**v0.1.3** — dialect serialize parity (hard-break + list-marker). **v0.1.2**
+native indented-code; **v0.1.1** quote/callout split. Noto may pin
+`github:roobli/md#v0.1.3` when ready.
 
 See:
 

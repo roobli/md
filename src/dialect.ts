@@ -10,14 +10,19 @@
  *   so delimiter rows are not padded on rewrite.
  * - Math + YAML frontmatter write extensions enabled.
  * - CJK-friendly to-markdown so Chinese flanking is not numeric-escaped.
+ * - Hard breaks as two trailing spaces (not backslash); list marker /
+ *   ordered delimiter from `node.data` when present (Phase 7).
  *
- * Noto still owns wiki-link verbatim runs, list-marker-from-node, bare autolink
- * shape, and hard-break-as-two-spaces until the bridge copies those handlers.
- * Hosts that need those exact bytes for an *edited* block should keep
- * supplying the markdown string themselves.
+ * Noto still owns wiki-link verbatim runs and bare autolink shape until the
+ * bridge copies those handlers. Hosts that need those exact bytes for an
+ * *edited* block should keep supplying the markdown string themselves.
  */
 
-import { toMarkdown, type Options as ToMarkdownOptions } from 'mdast-util-to-markdown';
+import {
+  defaultHandlers,
+  toMarkdown,
+  type Options as ToMarkdownOptions,
+} from 'mdast-util-to-markdown';
 import { cjkFriendlyToMarkdown } from 'mdast-util-to-markdown-cjk-friendly';
 import { gfmToMarkdown } from 'mdast-util-gfm';
 import { mathToMarkdown } from 'mdast-util-math';
@@ -49,6 +54,45 @@ function tildeOnlyInPairs(extension: ToMarkdownOptions): ToMarkdownOptions {
   };
 }
 
+/**
+ * Hard break as two trailing spaces (vault-majority), not backslash-newline.
+ * Only rewrites the unambiguous `\\\n` form; degraded space forms stay.
+ */
+const hardBreakAsTwoSpaces: ToMarkdownOptions = {
+  handlers: {
+    break(node, parent, state, info) {
+      const written = defaultHandlers.break(node, parent, state, info);
+      return written === '\\\n' ? '  \n' : written;
+    },
+  },
+};
+
+/**
+ * List keeps the marker / ordered delimiter carried on `node.data`.
+ * Swaps serializer options for the duration of this list only.
+ */
+const listMarkerFromNode: ToMarkdownOptions = {
+  handlers: {
+    list(node, parent, state, info) {
+      const data = node.data as { bullet?: string; delimiter?: string } | undefined;
+      const previousBullet = state.options.bullet;
+      const previousOrdered = state.options.bulletOrdered;
+      if (!node.ordered && (data?.bullet === '*' || data?.bullet === '+' || data?.bullet === '-')) {
+        state.options.bullet = data.bullet;
+      }
+      if (node.ordered && (data?.delimiter === '.' || data?.delimiter === ')')) {
+        state.options.bulletOrdered = data.delimiter;
+      }
+      try {
+        return defaultHandlers.list(node, parent, state, info);
+      } finally {
+        state.options.bullet = previousBullet;
+        state.options.bulletOrdered = previousOrdered;
+      }
+    },
+  },
+};
+
 const serializerOptions: ToMarkdownOptions = {
   bullet: '-',
   emphasis: EMPHASIS_MARKER,
@@ -64,6 +108,8 @@ const serializerOptions: ToMarkdownOptions = {
     tildeOnlyInPairs(gfmToMarkdown({ tablePipeAlign: false })),
     mathToMarkdown(),
     frontmatterToMarkdown(),
+    listMarkerFromNode,
+    hardBreakAsTwoSpaces,
   ],
 };
 
