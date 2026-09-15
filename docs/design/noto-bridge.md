@@ -40,11 +40,14 @@ Phase 0+ exports a host-agnostic twin. Phase 6 default path is **native only**
 ### How Noto would call incremental reparse
 
 Today `NotoEditor.replaceMarkdown` runs `splitBlocks` on the **whole** buffer,
-then keeps a common prefix/suffix of equal block markdown. With `@roobli/md`:
+then keeps a common prefix/suffix of equal block markdown. With `@roobli/md`
+(Phase 11 helpers):
 
-1. Keep the last accepted `SplitDocument` from open / prior reparse.
-2. Diff block markdown arrays to find `prefix` / `suffix` (same as today).
-3. Call `reparseBlocks({ prior, text: newMarkdown, replacedBlocks: { from: prefix, to: next.length - suffix - 1 }, neighborSlack: 1 })` instead of a full split.
+1. Keep the last accepted `SplitDocument` from open / prior reparse (invalidate
+   or rebuild after local typing that is not itself a reparse — host design).
+2. Prefer `reparseFromText(prior, newMarkdown, { neighborSlack: 1 })` when the
+   host only has the full next buffer; or derive `sourceEditBetween(joinSplit(prior), newMarkdown)` and pass it to `reparseBlocks`.
+3. When ordinals are already known, call `reparseBlocks({ prior, text: newMarkdown, replacedBlocks: { from, to }, neighborSlack: 1 })` instead.
 4. Single-block save validation can stay on `parseSingleBlock`; when applying
    one accepted unit, use `neighborSlack: 0` with `replacedBlocks: { from: i, to: i }`.
 
@@ -83,14 +86,15 @@ parse. The remaining critical path **is** the full dialect parse.
 `@roobli/md` owns making that parse faster (incremental, lazier mdast, or a
 purpose-built block scanner) without breaking the bridge above.
 
-## Recommended next step (post Phase 6)
+## Recommended next step (post Phase 11)
 
-Open a Noto **adapter PR** that:
+Adapter spike already lands in Noto (flagged). Remaining host work:
 
-1. Depends on `@roobli/md` (MIT) and maps `splitBlocks` → `parseBlocks`.
-2. Routes `replaceMarkdown` middle windows through `reparseBlocks`.
-3. Points single-block / identity saves at `serializeDocument` / `replaceBlock`,
+1. Cache the last accepted structural `SplitDocument` on open / reparse.
+2. Route flagged `replaceMarkdown` through `reparseFromText` (Phase 11) instead
+   of a full `splitBlocks` of the new buffer; design cache invalidation after
+   typing that bypasses reparse.
+3. Point single-block / identity saves at `serializeDocument` / `replaceBlock`,
    comparing `outputBytes` against existing Noto golden fixtures.
-4. Keeps `semanticKey`, branded IDs, sha256, and wire `nodes` in Noto until the
-   engine IR grows; optionally call `@roobli/md/legacy-micromark` only if a
-   temporary mdast `node` attach is needed for wire compatibility.
+4. Consider default-on behind broader golden gates; keep `semanticKey`, branded
+   IDs, sha256, and wire `nodes` in Noto until the engine IR grows.

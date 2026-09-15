@@ -26,7 +26,7 @@ export type {
 export type { LineEnding } from './line-endings.js';
 
 export { parseBlocks, parseSingleBlock, parseDocument, joinSplit } from './parse.js';
-export { reparseBlocks, applySourceEdit } from './reparse.js';
+export { reparseBlocks, applySourceEdit, sourceEditBetween, reparseFromText } from './reparse.js';
 export {
   serializeDocument,
   identityUnits,

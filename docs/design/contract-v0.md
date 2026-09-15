@@ -61,6 +61,16 @@ interface ReparseBlocksResult extends SplitDocument {
 
 /** Incremental / block-local reparse (Phase 4). Native only (Phase 6). */
 function reparseBlocks(options: ReparseBlocksOptions): ReparseBlocksResult;
+
+/** Longest common prefix/suffix → SourceEdit (null if identical). Phase 11. */
+function sourceEditBetween(priorText: string, nextText: string): SourceEdit | null;
+
+/** prior + full next text → reparseBlocks via sourceEditBetween. Phase 11. */
+function reparseFromText(
+  prior: SplitDocument,
+  text: string,
+  options?: { neighborSlack?: number },
+): ReparseBlocksResult;
 ```
 
 Coverage invariant: concatenating `leading`, each `span.markdown`, each
@@ -75,8 +85,10 @@ middle / suffix with absolute offsets. Untouched prefix spans keep object
 identity; untouched suffix spans keep `markdown` string identity. Micromark is not imported on this path (Phase 6); use `@roobli/md/legacy-micromark` for compat.
 
 Noto call sites: `replaceMarkdown` can pass the differing middle ordinals as
-`replacedBlocks` instead of `splitBlocks(fullMarkdown)`; the single-block save
-path can use `neighborSlack: 0` after `parseSingleBlock` validation.
+`replacedBlocks` instead of `splitBlocks(fullMarkdown)`; when the host only has
+the full next buffer, prefer `reparseFromText(prior, nextText)` (Phase 11).
+The single-block save path can use `neighborSlack: 0` after `parseSingleBlock`
+validation.
 
 ### Serialize (Phase 5)
 
@@ -162,6 +174,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **8** (done) | Verbatim runs + bare http(s) autolink serialize |
 | **9** (done) | Table delimiter widening (vault three-dash; content unpadded) |
 | **10** (done) | Line-prefix offset alignment (micromark parity) |
+| **11** (done) | `sourceEditBetween` + `reparseFromText` host helpers |
 
 ## Replace boundary
 
