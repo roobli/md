@@ -112,12 +112,14 @@ Byte-exact rules (aligned with Noto `serialize.ts`):
    sliced by offset so a poisoned `span.markdown` cannot fake a round-trip.
 
 Dialect hypothesis (verify on bridge): bullet `-`, emphasis/strong `*`, fenced
-backticks, `listItemIndent: 'one'`, GFM `tablePipeAlign: false`, pair-only
-tilde strike, math + YAML frontmatter, CJK to-markdown. **Phase 7**: engine
-owns hard-break-as-two-spaces and list-marker-from-node (`node.data.bullet` /
-`node.data.delimiter`). **Phase 8**: engine owns verbatim runs (wiki links,
-alerts, footnotes, `[TOC]`, snake_case / metrics) and bare http(s) autolink
-shape (previously host-owned in Noto).
+backticks, `listItemIndent: 'one'`, GFM `tablePipeAlign: false` (content cells
+unpadded), pair-only tilde strike, math + YAML frontmatter, CJK to-markdown.
+**Phase 7**: engine owns hard-break-as-two-spaces and list-marker-from-node
+(`node.data.bullet` / `node.data.delimiter`). **Phase 8**: engine owns
+verbatim runs (wiki links, alerts, footnotes, `[TOC]`, snake_case / metrics)
+and bare http(s) autolink shape (previously host-owned in Noto). **Phase 9**:
+delimiter rows widened to ≥3 dashes (vault three-dash style); content stays
+unpadded.
 
 ## Correctness goals
 
@@ -156,6 +158,8 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **5** (done) | Serialize dialect aligned with Noto’s byte-exact save rules |
 | **6** (done) | Quarantine micromark; `@roobli/md/legacy-micromark`; mdast optional |
 | **7** (done) | Serialize dialect parity: hard-break → two spaces; list marker/delimiter from `node.data` |
+| **8** (done) | Verbatim runs + bare http(s) autolink serialize |
+| **9** (done) | Table delimiter widening (vault three-dash; content unpadded) |
 
 ## Replace boundary
 

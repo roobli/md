@@ -32,5 +32,5 @@ export {
   identityUnits,
   replaceBlock,
 } from './serialize.js';
-export { renderMarkdown, INLINE_DELIMITERS } from './dialect.js';
+export { renderMarkdown, INLINE_DELIMITERS, widenDelimiterCells } from './dialect.js';
 export { toLf, fromLf } from './line-endings.js';

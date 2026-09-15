@@ -7,13 +7,15 @@
  * - Defaults match vault-majority style: `-` bullets, `*` emphasis/strong,
  *   fenced code with backticks, `listItemIndent: 'one'`, tight definitions.
  * - GFM: `singleTilde: false` (pair-only strikethrough); `tablePipeAlign: false`
- *   so delimiter rows are not padded on rewrite.
+ *   so content cells stay unpadded (vault majority). Delimiter hyphens are
+ *   widened to ≥3 (vault three-dash style) via `widenDelimiterCells` / Phase 9.
  * - Math + YAML frontmatter write extensions enabled.
  * - CJK-friendly to-markdown so Chinese flanking is not numeric-escaped.
  * - Hard breaks as two trailing spaces (not backslash); list marker /
  *   ordered delimiter from `node.data` when present (Phase 7).
  * - Verbatim runs (wiki links, alerts, footnotes, `[TOC]`, snake_case, …)
  *   and bare http(s) autolinks (Phase 8) — previously host-owned in Noto.
+ * - Table delimiter widening to vault three-dash style (Phase 9).
  */
 
 import {
@@ -194,6 +196,51 @@ const verbatimRunsInText: ToMarkdownOptions = {
   },
 };
 
+
+/**
+ * GFM with `tablePipeAlign: false` emits short delimiter cells (`| - | :- |`).
+ * Valid GFM needs ≥3 dashes. Widen only the hyphen run; keep alignment colons
+ * and surrounding spaces exactly where they were (Noto vault style).
+ */
+export function widenDelimiterCells(line: string): string {
+  return line.split('|').map((cell) => {
+    const trimmed = cell.trim();
+    if (!/^:?-+:?$/.test(trimmed)) return cell;
+    const left = trimmed.startsWith(':') ? ':' : '';
+    const right = trimmed.endsWith(':') ? ':' : '';
+    const dashes = '-'.repeat(Math.max(3, trimmed.length - left.length - right.length));
+    const lead = cell.startsWith(' ') ? ' ' : '';
+    const tail = cell.endsWith(' ') ? ' ' : '';
+    return `${lead}${left}${dashes}${right}${tail}`;
+  }).join('|');
+}
+
+/** The table handler, with its delimiter row rewritten on the way out. */
+function tablesAsTheVaultWritesThem(extension: ToMarkdownOptions): ToMarkdownOptions {
+  const table = extension.handlers?.table;
+  // The table handler lives in one of the GFM bundle's own sub-extensions
+  // rather than at its top level, so the search goes down as well as across.
+  const nested = extension.extensions?.map(tablesAsTheVaultWritesThem);
+  if (typeof table !== 'function') {
+    return nested ? { ...extension, extensions: nested } : extension;
+  }
+  return {
+    ...extension,
+    ...(nested ? { extensions: nested } : {}),
+    handlers: {
+      ...extension.handlers,
+      table(node, parent, state, info) {
+        const out = table.call(this, node, parent, state, info) as string;
+        const lines = out.split('\n');
+        const delimiter = lines[1];
+        if (delimiter === undefined) return out;
+        lines[1] = widenDelimiterCells(delimiter);
+        return lines.join('\n');
+      },
+    },
+  };
+}
+
 const serializerOptions: ToMarkdownOptions = {
   bullet: '-',
   emphasis: EMPHASIS_MARKER,
@@ -206,7 +253,7 @@ const serializerOptions: ToMarkdownOptions = {
   tightDefinitions: true,
   extensions: [
     cjkFriendlyToMarkdown(),
-    tildeOnlyInPairs(gfmToMarkdown({ tablePipeAlign: false })),
+    tablesAsTheVaultWritesThem(tildeOnlyInPairs(gfmToMarkdown({ tablePipeAlign: false }))),
     mathToMarkdown(),
     frontmatterToMarkdown(),
     verbatimRunsInText,

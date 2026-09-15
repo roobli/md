@@ -15,6 +15,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **6** | **Done** | Quarantine micromark from the hot path; legacy entry `@roobli/md/legacy-micromark`; mdast `node` optional on native path. |
 | **7** | **Done** | Serialize dialect parity: hard-break → two trailing spaces; list marker / ordered delimiter from `node.data`. |
 | **8** | **Done** | Serialize dialect: verbatim runs (wiki / alert / footnote / TOC / snake_case / metrics) + bare http(s) autolink — previously host-owned in Noto. |
+| **9** | **Done** | Table delimiter widening to vault three-dash style; `tablePipeAlign: false` kept (content unpadded). |
 
 ## Phase 1 acceptance (this slice)
 
@@ -115,7 +116,17 @@ Phase 7 **shipped** on `main` (v0.1.3).
       image alt, bare vs labelled link)
 - [x] Contract + README + roadmap updated; package `0.1.4`
 
-Phase 8 **shipped** on `main` (v0.1.4). Remaining optional engine work:
-line-prefix offset alignment, table delimiter widening (vault three-dash
-style), more Typora interop notes. Noto host adoption (default-on adapter +
-`reparseBlocks` in `replaceMarkdown`) stays separate.
+Phase 8 **shipped** on `main` (v0.1.4).
+
+## Phase 9 acceptance
+
+- [x] `widenDelimiterCells` + `tablesAsTheVaultWritesThem` ported from Noto
+- [x] Wired around GFM (`tablePipeAlign: false` kept — content cells unpadded;
+      delimiter hyphens widened to ≥3)
+- [x] Tests for alignment variants, space preservation, non-delimiter passthrough,
+      and `renderMarkdown` three-dash output
+- [x] Contract + README + roadmap updated; package `0.1.5`
+
+Phase 9 **shipped** on `main` (v0.1.5). Remaining optional engine work:
+line-prefix offset alignment, more Typora interop notes. Noto host adoption
+(default-on adapter + `reparseBlocks` in `replaceMarkdown`) stays separate.
