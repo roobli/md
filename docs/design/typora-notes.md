@@ -13,11 +13,12 @@ architecture, measured behaviour). Do **not** copy Typora JS into this repo.
 
 | Item | Result |
 | ---- | ------ |
-| Package | Official `typora_1.13.6_amd64.deb` from `download.typora.io` |
-| Install | Succeeded via `apt` on Debian 13 (trixie), x86_64 |
-| Binary | `/usr/bin/typora` → `/usr/share/typora/Typora` |
+| Package | Official `typora_1.13.6_amd64.deb` from `download.typora.io` (prior measure) |
+| Install | Succeeded via `apt` on Debian 13 (trixie), x86_64 when last installed |
+| Binary | `/usr/bin/typora` → `/usr/share/typora/Typora` (when present) |
 | Version | App `1.13.6` (`resources/package.json`); Electron/Chromium payload `35.6.0` (`/usr/share/typora/version`) |
 | GUI / license | Not exercised headlessly here; package installs cleanly. License gate is a runtime concern for interactive use, not for inspecting on-disk assets. |
+| Re-check (2026-09-15) | `/usr/share/typora` **absent** on this box at Phase 12 run — no new CSS/Docs scrape; macOS + prior Linux notes still apply. |
 
 ### macOS 1.14.9 (author’s Mac)
 
@@ -120,7 +121,7 @@ Drawn from `Noto/docs/design/typora-gap.md` and
 | Tables | GFM; alignment and padding are serialize-sensitive |
 | Math | Inline `$` and display `$$` / math fences; Typora centres display math |
 | Frontmatter | YAML `md-meta-block`; broken opening fences are a vault hazard |
-| CJK emphasis | CM flanking + CJK punctuation; Typora closes `**注意：**…` |
+| CJK emphasis | CM flanking + CJK punctuation; Typora closes `**注意：**…`. **Phase 12 engine lock-in:** `renderMarkdown` emits `**注意：**这是正文` (and `中文*强调*继续`, `（**重要**）`) with **no** numeric HTML escapes (`&#x…`); without `mdast-util-to-markdown-cjk-friendly` the same mdast becomes `**注意：**&#x8FD9;是正文`. |
 | Strikethrough | GFM; single tilde is subscript/text in Typora (`singleTilde: false`) |
 | HTML blocks / inline HTML | Editable, not “unsupported islands” |
 | Footnotes + link definitions | Top-level blocks in Noto v3 |

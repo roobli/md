@@ -1,4 +1,4 @@
-import type { Break, Image, Link, List, Paragraph, Table } from 'mdast';
+import type { Break, Emphasis, Image, Link, List, Paragraph, Strong, Table, Text } from 'mdast';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdown, widenDelimiterCells } from './dialect.js';
 
@@ -208,5 +208,75 @@ describe('dialect serialize parity (Phase 9)', () => {
     expect(out).toBe(
       '| a | hello | mid | wide column |\n| --- | :--- | :---: | ---: |\n| 1 | 2 | 3 | 4 |',
     );
+  });
+});
+
+
+describe('dialect serialize parity (Phase 12 — CJK emphasis / Typora interop)', () => {
+  it('Typora-shaped strong **注意：** does not numeric-escape following Chinese', () => {
+    const para: Paragraph = {
+      type: 'paragraph',
+      children: [
+        {
+          type: 'strong',
+          children: [{ type: 'text', value: '注意：' } satisfies Text],
+        } satisfies Strong,
+        { type: 'text', value: '这是正文' } satisfies Text,
+      ],
+    };
+    const out = renderMarkdown(para);
+    // Without mdast-util-to-markdown-cjk-friendly this becomes **注意：**&#x8FD9;是正文
+    expect(out).toBe('**注意：**这是正文');
+    expect(out).not.toMatch(/&#x[0-9A-Fa-f]+;/);
+  });
+
+  it('strong closed before fullwidth colon outside still keeps Chinese unescaped', () => {
+    const para: Paragraph = {
+      type: 'paragraph',
+      children: [
+        {
+          type: 'strong',
+          children: [{ type: 'text', value: '注意' } satisfies Text],
+        } satisfies Strong,
+        { type: 'text', value: '：后续' } satisfies Text,
+      ],
+    };
+    const out = renderMarkdown(para);
+    expect(out).toBe('**注意**：后续');
+    expect(out).not.toMatch(/&#x[0-9A-Fa-f]+;/);
+  });
+
+  it('emphasis between CJK characters keeps * delimiters and no numeric escapes', () => {
+    const para: Paragraph = {
+      type: 'paragraph',
+      children: [
+        { type: 'text', value: '中文' } satisfies Text,
+        {
+          type: 'emphasis',
+          children: [{ type: 'text', value: '强调' } satisfies Text],
+        } satisfies Emphasis,
+        { type: 'text', value: '继续' } satisfies Text,
+      ],
+    };
+    const out = renderMarkdown(para);
+    expect(out).toBe('中文*强调*继续');
+    expect(out).not.toMatch(/&#x[0-9A-Fa-f]+;/);
+  });
+
+  it('CJK punctuation flanking strong stays literal (vault habit)', () => {
+    const para: Paragraph = {
+      type: 'paragraph',
+      children: [
+        { type: 'text', value: '（' } satisfies Text,
+        {
+          type: 'strong',
+          children: [{ type: 'text', value: '重要' } satisfies Text],
+        } satisfies Strong,
+        { type: 'text', value: '）' } satisfies Text,
+      ],
+    };
+    const out = renderMarkdown(para);
+    expect(out).toBe('（**重要**）');
+    expect(out).not.toMatch(/&#x[0-9A-Fa-f]+;/);
   });
 });

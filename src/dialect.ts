@@ -10,7 +10,8 @@
  *   so content cells stay unpadded (vault majority). Delimiter hyphens are
  *   widened to ≥3 (vault three-dash style) via `widenDelimiterCells` / Phase 9.
  * - Math + YAML frontmatter write extensions enabled.
- * - CJK-friendly to-markdown so Chinese flanking is not numeric-escaped.
+ * - CJK-friendly to-markdown so Chinese flanking is not numeric-escaped
+ *   (Phase 12 lock-in: Typora-shaped `**注意：**…` round-trips without `&#x…`).
  * - Hard breaks as two trailing spaces (not backslash); list marker /
  *   ordered delimiter from `node.data` when present (Phase 7).
  * - Verbatim runs (wiki links, alerts, footnotes, `[TOC]`, snake_case, …)

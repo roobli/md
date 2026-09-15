@@ -18,6 +18,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **9** | **Done** | Table delimiter widening to vault three-dash style; `tablePipeAlign: false` kept (content unpadded). |
 | **10** | **Done** | Line-prefix offset alignment: up to three leading ASCII spaces before a block marker land in leading/gaps (micromark parity); html / indented-code / frontmatter unchanged. |
 | **11** | **Done** | Host helpers: `sourceEditBetween` + `reparseFromText` — derive a contiguous `SourceEdit` from prior/next full buffers and incremental-reparse without a hand-built edit or ordinals. |
+| **12** | **Done** | CJK emphasis / Typora interop lock-in: `renderMarkdown` keeps Typora-shaped `**注意：**…` without numeric-escaping Chinese flanking. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -51,7 +52,7 @@ Phase 3 **shipped** on `main`. Phase 6 moved micromark behind `@roobli/md/legacy
 - **Whole-doc micromark fallback (Phase 6)**: removed from `parseBlocks`. Compat lives at `@roobli/md/legacy-micromark`.
 - **Indented code**: **native** (`indented-code`) with exact offsets; internal blanks between indented chunks stay one span; does not interrupt paragraphs (CommonMark). Shipped post–Phase 6 in v0.1.2.
 - **Line-prefix offsets**: **aligned** (Phase 10) — up to three leading ASCII spaces before a block marker go to leading/gaps, matching micromark; html / indented-code / frontmatter keep opening bytes.
-- **CJK emphasis / `semanticKey`**: block split is kind+offset only; inline CJK flanking stays a host / IR concern.
+- **CJK emphasis / `semanticKey`**: block split is kind+offset only; **serialize** CJK flanking locked in Phase 12 (`renderMarkdown`). Inline parse / `semanticKey` remains a host / IR concern.
 - **Phase 4 done**: `reparseBlocks` stitches local native reparses; see contract.
 - **Phase 5 done**: `serializeDocument` / hardened `joinSplit`; see contract.
 
@@ -153,8 +154,20 @@ Phase 10 **shipped** on `main` (v0.1.6).
       full-parse parity with default slack, and no-op
 - [x] Contract + README + roadmap updated; package `0.1.7`
 
-Phase 11 **shipped** on `main` (v0.1.7). Remaining optional engine work: more
-Typora interop notes. Noto host adoption of `reparseFromText` on flagged
-`replaceMarkdown` (prior-split cache + typing invalidation) landed in Noto
+Phase 11 **shipped** on `main` (v0.1.7). Noto host adoption of
+`reparseFromText` on flagged `replaceMarkdown` landed in Noto
 [#81](https://github.com/roobli/Noto/pull/81). Default-on adapter still needs
-broader golden gates on the Noto side.
+broader golden gates on the Noto side (host-owned, not this package).
+
+## Phase 12 acceptance
+
+- [x] Focused `renderMarkdown` tests: Typora-shaped strong `**注意：**` +
+      following Chinese must not emit `&#x…` numeric escapes
+- [x] Emphasis between CJK characters and CJK punctuation flanking strong
+      preserve vault-shaped delimiters
+- [x] `cjkFriendlyToMarkdown()` remains on the serialize dialect path (no
+      dialect logic change required — lock-in only)
+- [x] Contract + README + roadmap + typora-notes updated; package `0.1.8`
+
+Phase 12 **shipped** on `main` (v0.1.8). Remaining optional engine work: further
+Typora interop notes if newly measured. Noto golden / default-on stays host-side.
