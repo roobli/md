@@ -69,6 +69,72 @@ export function applySourceEdit(priorText: string, edit: SourceEdit): string {
   return priorText.slice(0, edit.priorStart) + edit.inserted + priorText.slice(edit.priorEnd);
 }
 
+/**
+ * Derive a single contiguous `SourceEdit` from two full texts by longest
+ * common prefix / suffix. Returns `null` when the texts are identical.
+ *
+ * Hosts that keep a prior `SplitDocument` and receive a new full buffer
+ * (Noto `replaceMarkdown`) can pass the result to `reparseBlocks` instead of
+ * a whole-document `parseBlocks` of the new buffer. Overlapping prefix/suffix
+ * never crosses: the common ends shrink until they leave a non-empty middle
+ * on at least one side (or both empty for a pure insert at a caret).
+ */
+export function sourceEditBetween(priorText: string, nextText: string): SourceEdit | null {
+  if (priorText === nextText) return null;
+  const minLen = Math.min(priorText.length, nextText.length);
+  let prefix = 0;
+  while (prefix < minLen && priorText.charCodeAt(prefix) === nextText.charCodeAt(prefix)) {
+    prefix += 1;
+  }
+  let suffix = 0;
+  while (
+    suffix < minLen - prefix
+    && priorText.charCodeAt(priorText.length - 1 - suffix)
+      === nextText.charCodeAt(nextText.length - 1 - suffix)
+  ) {
+    suffix += 1;
+  }
+  return {
+    priorStart: prefix,
+    priorEnd: priorText.length - suffix,
+    inserted: nextText.slice(prefix, nextText.length - suffix),
+  };
+}
+
+/**
+ * Incremental reparse when the host has a prior split and the full next text
+ * but not ordinals or a hand-built `SourceEdit`.
+ *
+ * Derives the edit via `sourceEditBetween`. Identical texts return the prior
+ * split with an empty dirty window (`dirtyTo < dirtyFrom`).
+ */
+export function reparseFromText(
+  prior: SplitDocument,
+  text: string,
+  options?: { readonly neighborSlack?: number },
+): ReparseBlocksResult {
+  const priorText = joinSplit(prior);
+  const edit = sourceEditBetween(priorText, text);
+  if (!edit) {
+    return {
+      spans: prior.spans,
+      leading: prior.leading,
+      gaps: prior.gaps,
+      trailing: prior.trailing,
+      dirtyFrom: 0,
+      dirtyTo: -1,
+      windowStart: 0,
+      windowEnd: 0,
+    };
+  }
+  return reparseBlocks({
+    prior,
+    text,
+    edit,
+    ...(options?.neighborSlack !== undefined ? { neighborSlack: options.neighborSlack } : {}),
+  });
+}
+
 function mapPriorOffsetExclusiveEnd(offset: number, edit: SourceEdit): number {
   if (offset <= edit.priorStart) return offset;
   if (offset >= edit.priorEnd) {

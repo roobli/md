@@ -16,7 +16,9 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 10 shipped** — line-prefix offset alignment (0–3 leading ASCII spaces
+**Phase 11 shipped** — `sourceEditBetween` + `reparseFromText` so hosts with a
+prior split and a full next buffer can incremental-reparse without inventing
+ordinals. **Phase 10** — line-prefix offset alignment (0–3 leading ASCII spaces
 before a block marker → leading/gaps, micromark parity). **Phase 9** — table
 delimiter widening to vault three-dash style
 (`| --- | :--- | :---: | ---: |`) while keeping `tablePipeAlign: false`
@@ -33,10 +35,11 @@ thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.6** — line-prefix offset alignment. **v0.1.5** table delimiter
-widening. **v0.1.4** verbatim runs + bare autolink. **v0.1.3** hard-break +
-list-marker; **v0.1.2** native indented-code; **v0.1.1** quote/callout split.
-Noto may pin `github:roobli/md#v0.1.6` when ready.
+**v0.1.7** — `sourceEditBetween` / `reparseFromText`. **v0.1.6** line-prefix
+offset alignment. **v0.1.5** table delimiter widening. **v0.1.4** verbatim runs
++ bare autolink. **v0.1.3** hard-break + list-marker; **v0.1.2** native
+indented-code; **v0.1.1** quote/callout split.
+Noto may pin `github:roobli/md#v0.1.7` when ready.
 
 See:
 
@@ -60,6 +63,7 @@ import {
   parseBlocks,
   parseDocument,
   reparseBlocks,
+  reparseFromText,
   serializeDocument,
   identityUnits,
   replaceBlock,
@@ -69,13 +73,9 @@ const split = parseBlocks("# Hello\n\nWorld\n");
 // split.spans[0].kind === "heading"
 // split.spans[0].start / .end index into the source string
 
-const next = reparseBlocks({
-  prior: split,
-  edit: { priorStart: split.spans[1].start, priorEnd: split.spans[1].end, inserted: "Moon" },
-  replacedBlocks: { from: 1, to: 1 },
-  neighborSlack: 0,
-});
-// next.spans[0] === split.spans[0] (untouched identity)
+const next = reparseFromText(split, "# Hello\n\nMoon\n");
+// or reparseBlocks({ prior, edit, replacedBlocks, neighborSlack })
+// next.spans[0] === split.spans[0] when the heading is outside the dirty window
 
 const doc = parseDocument(new TextEncoder().encode("# Hello\n\nWorld\n"));
 if (doc.status === "parsed") {

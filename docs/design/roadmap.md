@@ -17,6 +17,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **8** | **Done** | Serialize dialect: verbatim runs (wiki / alert / footnote / TOC / snake_case / metrics) + bare http(s) autolink — previously host-owned in Noto. |
 | **9** | **Done** | Table delimiter widening to vault three-dash style; `tablePipeAlign: false` kept (content unpadded). |
 | **10** | **Done** | Line-prefix offset alignment: up to three leading ASCII spaces before a block marker land in leading/gaps (micromark parity); html / indented-code / frontmatter unchanged. |
+| **11** | **Done** | Host helpers: `sourceEditBetween` + `reparseFromText` — derive a contiguous `SourceEdit` from prior/next full buffers and incremental-reparse without a hand-built edit or ordinals. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -139,6 +140,20 @@ Phase 9 **shipped** on `main` (v0.1.5).
 - [x] Coverage / `joinSplit` identity preserved; tests for prefix → leading/gap
 - [x] Contract + README + roadmap updated; package `0.1.6`
 
-Phase 10 **shipped** on `main` (v0.1.6). Remaining optional engine work: more
-Typora interop notes. Noto host adoption (default-on adapter + `reparseBlocks`
-in `replaceMarkdown`) stays separate.
+Phase 10 **shipped** on `main` (v0.1.6).
+
+## Phase 11 acceptance
+
+- [x] `sourceEditBetween(priorText, nextText)` → `SourceEdit | null` (longest
+      common prefix/suffix; null when identical)
+- [x] `reparseFromText(prior, text, { neighborSlack? })` wires that edit into
+      `reparseBlocks`; identical text returns empty dirty window
+      (`dirtyTo < dirtyFrom`)
+- [x] Tests for round-trip edit, pure insert, identity-preserving reparse,
+      full-parse parity with default slack, and no-op
+- [x] Contract + README + roadmap updated; package `0.1.7`
+
+Phase 11 **shipped** on `main` (v0.1.7). Remaining optional engine work: more
+Typora interop notes. Noto host adoption (cache prior split + call
+`reparseFromText` from flagged `replaceMarkdown`; default-on adapter) stays
+separate — needs a host design for cache invalidation after typing.
