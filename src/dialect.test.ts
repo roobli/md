@@ -1,6 +1,6 @@
-import type { Break, Image, Link, List, Paragraph } from 'mdast';
+import type { Break, Image, Link, List, Paragraph, Table } from 'mdast';
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown } from './dialect.js';
+import { renderMarkdown, widenDelimiterCells } from './dialect.js';
 
 describe('dialect serialize parity (Phase 7)', () => {
   it('hard break renders as two spaces + newline, not backslash-newline', () => {
@@ -151,5 +151,62 @@ describe('dialect serialize parity (Phase 8)', () => {
     };
     const out = renderMarkdown(para);
     expect(out).toBe('[Example](https://example.com/path)');
+  });
+});
+
+describe('dialect serialize parity (Phase 9)', () => {
+  it('widenDelimiterCells widens unaligned / left / center / right cells', () => {
+    expect(widenDelimiterCells('| - | :- | :-: | -: |')).toBe('| --- | :--- | :---: | ---: |');
+  });
+
+  it('widenDelimiterCells keeps already-long hyphen runs', () => {
+    expect(widenDelimiterCells('| ---- | :----- | :----: | ----: |')).toBe(
+      '| ---- | :----- | :----: | ----: |',
+    );
+  });
+
+  it('widenDelimiterCells preserves spaces around cells when present', () => {
+    // GFM short cells already carry one space on each side; those stay.
+    expect(widenDelimiterCells('| - | :- |')).toBe('| --- | :--- |');
+    // Only a single lead/tail space is restored (matches Noto helper).
+    expect(widenDelimiterCells('|  -  |')).toBe('| --- |');
+    // No surrounding spaces stay absent.
+    expect(widenDelimiterCells('|-|:-|')).toBe('|---|:---|');
+  });
+
+  it('widenDelimiterCells leaves non-delimiter lines unchanged', () => {
+    expect(widenDelimiterCells('| a | hello | mid |')).toBe('| a | hello | mid |');
+    expect(widenDelimiterCells('not a table')).toBe('not a table');
+  });
+
+  it('renderMarkdown emits vault three-dash delimiter row (content unpadded)', () => {
+    const table: Table = {
+      type: 'table',
+      align: [null, 'left', 'center', 'right'],
+      children: [
+        {
+          type: 'tableRow',
+          children: [
+            { type: 'tableCell', children: [{ type: 'text', value: 'a' }] },
+            { type: 'tableCell', children: [{ type: 'text', value: 'hello' }] },
+            { type: 'tableCell', children: [{ type: 'text', value: 'mid' }] },
+            { type: 'tableCell', children: [{ type: 'text', value: 'wide column' }] },
+          ],
+        },
+        {
+          type: 'tableRow',
+          children: [
+            { type: 'tableCell', children: [{ type: 'text', value: '1' }] },
+            { type: 'tableCell', children: [{ type: 'text', value: '2' }] },
+            { type: 'tableCell', children: [{ type: 'text', value: '3' }] },
+            { type: 'tableCell', children: [{ type: 'text', value: '4' }] },
+          ],
+        },
+      ],
+    };
+    const out = renderMarkdown(table);
+    expect(out).toBe(
+      '| a | hello | mid | wide column |\n| --- | :--- | :---: | ---: |\n| 1 | 2 | 3 | 4 |',
+    );
   });
 });
