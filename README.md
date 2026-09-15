@@ -16,7 +16,9 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 9 shipped** — table delimiter widening to vault three-dash style
+**Phase 10 shipped** — line-prefix offset alignment (0–3 leading ASCII spaces
+before a block marker → leading/gaps, micromark parity). **Phase 9** — table
+delimiter widening to vault three-dash style
 (`| --- | :--- | :---: | ---: |`) while keeping `tablePipeAlign: false`
 (content cells unpadded). **Phase 8** — serialize dialect verbatim runs
 (wiki links, alerts, footnotes, `[TOC]`, snake_case / metrics) and bare
@@ -31,10 +33,10 @@ thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.5** — table delimiter widening. **v0.1.4** verbatim runs + bare
-autolink. **v0.1.3** hard-break + list-marker; **v0.1.2** native
-indented-code; **v0.1.1** quote/callout split. Noto may pin
-`github:roobli/md#v0.1.5` when ready.
+**v0.1.6** — line-prefix offset alignment. **v0.1.5** table delimiter
+widening. **v0.1.4** verbatim runs + bare autolink. **v0.1.3** hard-break +
+list-marker; **v0.1.2** native indented-code; **v0.1.1** quote/callout split.
+Noto may pin `github:roobli/md#v0.1.6` when ready.
 
 See:
 

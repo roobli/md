@@ -52,6 +52,7 @@ See [`roadmap.md`](./roadmap.md) for the full table. Short form:
 | **4** (done) | Incremental / block-local reparse |
 | **5** (done) | Serialize / byte-exact save |
 | **6** (done) | Quarantine hot-path micromark (`legacy-micromark` entry) |
+| **7–10** (done) | Serialize dialect polish + table delimiters + line-prefix offsets |
 
 ## Success metric
 

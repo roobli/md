@@ -9,8 +9,10 @@
  * tight/loose lists (and task lists) stay one block across inter-item blanks;
  * indented code keeps internal blanks between indented chunks.
  *
- * Indented code does not interrupt paragraphs (CommonMark). Remaining gaps
- * (line-prefix offset quirks vs micromark) stay documented in the roadmap.
+ * Indented code does not interrupt paragraphs (CommonMark). Phase 10 aligns
+ * opening-line offsets with micromark: up to three leading ASCII spaces before
+ * a block marker become leading/gap, not span markdown (html / indented-code /
+ * frontmatter keep their bytes).
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -54,6 +56,22 @@ function indentOf(content: string): number {
     else break;
   }
   return indent;
+}
+
+/**
+ * CommonMark / micromark: up to three ASCII spaces before a block marker are
+ * not part of the block's source span (they land in leading / gaps). Tabs are
+ * not counted here — a leading tab is indented-code territory (≥4 columns).
+ */
+function linePrefixLen(content: string): number {
+  let n = 0;
+  while (n < 3 && content[n] === ' ') n += 1;
+  return n;
+}
+
+/** Span start after the optional 0–3 space line prefix. */
+function spanStartAfterPrefix(line: Line): number {
+  return line.start + linePrefixLen(line.content);
 }
 
 function stripIndent(content: string, max = 3): string {
@@ -358,7 +376,7 @@ export function tryNativeSplit(text: string): SplitDocument {
     // Display math
     const math = displayMathOpen(line.content);
     if (math) {
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 1;
       while (j < lines.length && !isDisplayMathClose(lines[j]!.content, math.length)) {
         j += 1;
@@ -409,7 +427,7 @@ export function tryNativeSplit(text: string): SplitDocument {
     // Link / footnote definitions (block-start only; do not interrupt paragraphs)
     const def = definitionOpen(line.content);
     if (def) {
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 1;
       // Continuations: indented non-blank lines (title / footnote body)
       while (j < lines.length) {
@@ -430,7 +448,7 @@ export function tryNativeSplit(text: string): SplitDocument {
     // Fenced code
     const fence = fenceOpen(line.content);
     if (fence) {
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 1;
       while (j < lines.length && !isFenceClose(lines[j]!.content, fence.marker, fence.length)) {
         j += 1;
@@ -444,14 +462,14 @@ export function tryNativeSplit(text: string): SplitDocument {
 
     // ATX heading (single line)
     if (isAtxHeading(line.content)) {
-      raw.push({ kind: 'heading', start: line.start, end: line.next });
+      raw.push({ kind: 'heading', start: spanStartAfterPrefix(line), end: line.next });
       i += 1;
       continue;
     }
 
     // Thematic break
     if (isThematicBreak(line.content)) {
-      raw.push({ kind: 'thematic-break', start: line.start, end: line.next });
+      raw.push({ kind: 'thematic-break', start: spanStartAfterPrefix(line), end: line.next });
       i += 1;
       continue;
     }
@@ -463,7 +481,7 @@ export function tryNativeSplit(text: string): SplitDocument {
     // inside one quote. Do not merge across unprefixed blanks (Noto #37 /
     // tight adjacent quotes+callouts).
     if (isBlockQuote(line.content)) {
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 1;
       while (j < lines.length) {
         const next = lines[j]!;
@@ -481,7 +499,7 @@ export function tryNativeSplit(text: string): SplitDocument {
 
     // GFM table
     if (looksLikeTable(lines, i)) {
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 2;
       while (j < lines.length) {
         const next = lines[j]!;
@@ -504,7 +522,7 @@ export function tryNativeSplit(text: string): SplitDocument {
     if (isListItem(line.content)) {
       const ordered = orderedMarker(line.content) !== null;
       let hasTask = isTaskListItem(line.content);
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 1;
       while (j < lines.length) {
         const next = lines[j]!;
@@ -569,7 +587,7 @@ export function tryNativeSplit(text: string): SplitDocument {
 
     // Paragraph / setext heading
     {
-      const start = line.start;
+      const start = spanStartAfterPrefix(line);
       let j = i + 1;
       while (j < lines.length) {
         const next = lines[j]!;
