@@ -62,8 +62,10 @@ Noto integration path (later):
 4. Preserve wire `nodes`: open path must still ship top-level nodes so the
    renderer does not reparse.
 5. **Serialize adoption steps**
-   - Switch identity / single-block save tests to `@roobli/md` `serializeDocument`
-     and compare `outputBytes` against today’s Noto golden fixtures.
+   - ~~Identity / single-block saves~~ → done in Noto [#82](https://github.com/roobli/Noto/pull/82)
+     (flagged `serializeDocument`; A/B golden gates under
+     `tests/fixtures/markdown-golden/`).
+   - Broaden to multi-block inserts/deletes; keep `outputBytes` parity vs micromark.
    - Point edited-block rendering at `renderMarkdown` (Phase 7–8 ported
      hard-break, list-marker, verbatim runs, bare autolink) or keep Noto
      `syntax.ts` render until the flagged path is default-on.
@@ -88,13 +90,21 @@ purpose-built block scanner) without breaking the bridge above.
 
 ## Recommended next step (post Phase 11)
 
-Adapter spike already lands in Noto (flagged). Host `replaceMarkdown` wiring
-(prior-split cache + `reparseFromText`, invalidate after typing) shipped in
-Noto [#81](https://github.com/roobli/Noto/pull/81). Remaining:
+Adapter spike already lands in Noto (flagged). Host adoptions so far:
 
-1. Point single-block / identity saves at `serializeDocument` / `replaceBlock`,
-   comparing `outputBytes` against existing Noto golden fixtures.
-2. Consider default-on behind broader golden gates; keep `semanticKey`, branded
-   IDs, sha256, and wire `nodes` in Noto until the engine IR grows.
+- **#81** — `replaceMarkdown` → prior-split cache + `reparseFromText`
+  (invalidate after typing): https://github.com/roobli/Noto/pull/81
+- **#82** — identity / single-block saves → flagged `serializeDocument`
+  (`toEngineDocument` / `toSerializeUnits`; multi-block + `source` mode stay
+  on Noto): https://github.com/roobli/Noto/pull/82
+
+Remaining:
+
+1. Broaden flagged serialize to multi-block inserts/deletes; keep comparing
+   `outputBytes` against Noto's micromark path.
+2. Grow Noto option-B golden gates (`tests/fixtures/markdown-golden/` +
+   `markdown-golden-gates.test.ts`) before considering default-on; keep
+   `semanticKey`, branded IDs, sha256, and wire `nodes` in Noto until the
+   engine IR grows. Do **not** flip `NOTO_MARKDOWN_ENGINE` default yet.
 3. Open-path / `parseDocument` first measured cut still needs a design pass on
    the Noto side (`docs/performance/measurements.md`).
