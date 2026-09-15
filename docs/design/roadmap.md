@@ -154,6 +154,7 @@ Phase 10 **shipped** on `main` (v0.1.6).
 - [x] Contract + README + roadmap updated; package `0.1.7`
 
 Phase 11 **shipped** on `main` (v0.1.7). Remaining optional engine work: more
-Typora interop notes. Noto host adoption (cache prior split + call
-`reparseFromText` from flagged `replaceMarkdown`; default-on adapter) stays
-separate — needs a host design for cache invalidation after typing.
+Typora interop notes. Noto host adoption of `reparseFromText` on flagged
+`replaceMarkdown` (prior-split cache + typing invalidation) landed in Noto
+[#81](https://github.com/roobli/Noto/pull/81). Default-on adapter still needs
+broader golden gates on the Noto side.
