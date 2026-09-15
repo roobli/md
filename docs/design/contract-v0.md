@@ -119,7 +119,8 @@ unpadded), pair-only tilde strike, math + YAML frontmatter, CJK to-markdown.
 verbatim runs (wiki links, alerts, footnotes, `[TOC]`, snake_case / metrics)
 and bare http(s) autolink shape (previously host-owned in Noto). **Phase 9**:
 delimiter rows widened to ≥3 dashes (vault three-dash style); content stays
-unpadded.
+unpadded. **Phase 10**: line-prefix offsets aligned with micromark (0–3 leading
+ASCII spaces → leading/gaps; html / indented-code / frontmatter unchanged).
 
 ## Correctness goals
 
@@ -160,6 +161,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **7** (done) | Serialize dialect parity: hard-break → two spaces; list marker/delimiter from `node.data` |
 | **8** (done) | Verbatim runs + bare http(s) autolink serialize |
 | **9** (done) | Table delimiter widening (vault three-dash; content unpadded) |
+| **10** (done) | Line-prefix offset alignment (micromark parity) |
 
 ## Replace boundary
 

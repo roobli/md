@@ -258,8 +258,55 @@ describe('tryNativeSplit', () => {
     expect(tryNativeSplit('    - not list\n')!.spans[0]!.kind).toBe('indented-code');
     expect(tryNativeSplit('    ```\n    notfence\n')!.spans[0]!.kind).toBe('indented-code');
 
-    // 3 spaces remain a paragraph (not indented-code).
-    expect(tryNativeSplit('   three\n')!.spans[0]!.kind).toBe('paragraph');
+    // 3 spaces remain a paragraph (not indented-code); Phase 10 drops the
+    // prefix from the span (micromark parity).
+    const three = tryNativeSplit('   three\n')!;
+    expect(three.spans[0]!.kind).toBe('paragraph');
+    expect(three.leading).toBe('   ');
+    expect(three.spans[0]!.markdown).toBe('three');
+    expect(three.spans[0]!.start).toBe(3);
+  });
+
+  it('Phase 10: line-prefix offsets match micromark (spaces → leading/gap)', () => {
+    const heading = tryNativeSplit('  # Title\n')!;
+    expect(joinSplit(heading)).toBe('  # Title\n');
+    expect(heading.leading).toBe('  ');
+    expect(heading.spans[0]!.kind).toBe('heading');
+    expect(heading.spans[0]!.start).toBe(2);
+    expect(heading.spans[0]!.markdown).toBe('# Title');
+
+    const listAfter = tryNativeSplit('# first\n\n  - item\n')!;
+    expect(joinSplit(listAfter)).toBe('# first\n\n  - item\n');
+    expect(listAfter.spans.map((s) => s.kind)).toEqual(['heading', 'bullet-list']);
+    expect(listAfter.gaps[0]).toBe('\n\n  ');
+    expect(listAfter.spans[1]!.markdown).toBe('- item');
+    expect(listAfter.spans[1]!.start).toBe(11);
+
+    const quote = tryNativeSplit('   > hi\n')!;
+    expect(quote.leading).toBe('   ');
+    expect(quote.spans[0]!.markdown).toBe('> hi');
+
+    const fence = tryNativeSplit('  ```\ncode\n```\n')!;
+    expect(fence.leading).toBe('  ');
+    expect(fence.spans[0]!.markdown).toBe('```\ncode\n```');
+
+    const table = tryNativeSplit('   | a | b |\n   | - | - |\n')!;
+    expect(table.leading).toBe('   ');
+    expect(table.spans[0]!.markdown.startsWith('| a | b |')).toBe(true);
+
+    const para = tryNativeSplit('  foo\n  bar\n')!;
+    expect(para.leading).toBe('  ');
+    expect(para.spans[0]!.markdown).toBe('foo\n  bar');
+
+    // HTML and indented-code keep their opening bytes (micromark parity).
+    const html = tryNativeSplit('  <!-- c -->\n')!;
+    expect(html.leading).toBe('');
+    expect(html.spans[0]!.markdown).toBe('  <!-- c -->');
+
+    const indented = tryNativeSplit('    code();\n')!;
+    expect(indented.leading).toBe('');
+    expect(indented.spans[0]!.kind).toBe('indented-code');
+    expect(indented.spans[0]!.markdown).toBe('    code();');
   });
 
   it('handles frontmatter + math + html + defs in one native pass', () => {

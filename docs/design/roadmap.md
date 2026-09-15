@@ -16,6 +16,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **7** | **Done** | Serialize dialect parity: hard-break → two trailing spaces; list marker / ordered delimiter from `node.data`. |
 | **8** | **Done** | Serialize dialect: verbatim runs (wiki / alert / footnote / TOC / snake_case / metrics) + bare http(s) autolink — previously host-owned in Noto. |
 | **9** | **Done** | Table delimiter widening to vault three-dash style; `tablePipeAlign: false` kept (content unpadded). |
+| **10** | **Done** | Line-prefix offset alignment: up to three leading ASCII spaces before a block marker land in leading/gaps (micromark parity); html / indented-code / frontmatter unchanged. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -48,7 +49,7 @@ Phase 3 **shipped** on `main`. Phase 6 moved micromark behind `@roobli/md/legacy
 
 - **Whole-doc micromark fallback (Phase 6)**: removed from `parseBlocks`. Compat lives at `@roobli/md/legacy-micromark`.
 - **Indented code**: **native** (`indented-code`) with exact offsets; internal blanks between indented chunks stay one span; does not interrupt paragraphs (CommonMark). Shipped post–Phase 6 in v0.1.2.
-- **Line-prefix offsets**: native spans include up to three leading spaces on the opening line; micromark often starts at the marker — coverage invariant still holds.
+- **Line-prefix offsets**: **aligned** (Phase 10) — up to three leading ASCII spaces before a block marker go to leading/gaps, matching micromark; html / indented-code / frontmatter keep opening bytes.
 - **CJK emphasis / `semanticKey`**: block split is kind+offset only; inline CJK flanking stays a host / IR concern.
 - **Phase 4 done**: `reparseBlocks` stitches local native reparses; see contract.
 - **Phase 5 done**: `serializeDocument` / hardened `joinSplit`; see contract.
@@ -127,6 +128,17 @@ Phase 8 **shipped** on `main` (v0.1.4).
       and `renderMarkdown` three-dash output
 - [x] Contract + README + roadmap updated; package `0.1.5`
 
-Phase 9 **shipped** on `main` (v0.1.5). Remaining optional engine work:
-line-prefix offset alignment, more Typora interop notes. Noto host adoption
-(default-on adapter + `reparseBlocks` in `replaceMarkdown`) stays separate.
+Phase 9 **shipped** on `main` (v0.1.5).
+
+## Phase 10 acceptance
+
+- [x] Opening-line `span.start` skips 0–3 ASCII spaces for heading / paragraph /
+      list / quote / fence / thematic / table / display-math / defs (micromark
+      parity); spaces land in `leading` / gaps
+- [x] HTML blocks, indented-code, and frontmatter keep opening bytes
+- [x] Coverage / `joinSplit` identity preserved; tests for prefix → leading/gap
+- [x] Contract + README + roadmap updated; package `0.1.6`
+
+Phase 10 **shipped** on `main` (v0.1.6). Remaining optional engine work: more
+Typora interop notes. Noto host adoption (default-on adapter + `reparseBlocks`
+in `replaceMarkdown`) stays separate.
