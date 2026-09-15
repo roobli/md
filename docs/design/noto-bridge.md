@@ -88,13 +88,13 @@ purpose-built block scanner) without breaking the bridge above.
 
 ## Recommended next step (post Phase 11)
 
-Adapter spike already lands in Noto (flagged). Remaining host work:
+Adapter spike already lands in Noto (flagged). Host `replaceMarkdown` wiring
+(prior-split cache + `reparseFromText`, invalidate after typing) shipped in
+Noto [#81](https://github.com/roobli/Noto/pull/81). Remaining:
 
-1. Cache the last accepted structural `SplitDocument` on open / reparse.
-2. Route flagged `replaceMarkdown` through `reparseFromText` (Phase 11) instead
-   of a full `splitBlocks` of the new buffer; design cache invalidation after
-   typing that bypasses reparse.
-3. Point single-block / identity saves at `serializeDocument` / `replaceBlock`,
+1. Point single-block / identity saves at `serializeDocument` / `replaceBlock`,
    comparing `outputBytes` against existing Noto golden fixtures.
-4. Consider default-on behind broader golden gates; keep `semanticKey`, branded
+2. Consider default-on behind broader golden gates; keep `semanticKey`, branded
    IDs, sha256, and wire `nodes` in Noto until the engine IR grows.
+3. Open-path / `parseDocument` first measured cut still needs a design pass on
+   the Noto side (`docs/performance/measurements.md`).
