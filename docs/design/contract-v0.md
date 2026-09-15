@@ -133,6 +133,9 @@ and bare http(s) autolink shape (previously host-owned in Noto). **Phase 9**:
 delimiter rows widened to ≥3 dashes (vault three-dash style); content stays
 unpadded. **Phase 10**: line-prefix offsets aligned with micromark (0–3 leading
 ASCII spaces → leading/gaps; html / indented-code / frontmatter unchanged).
+**Phase 12**: CJK-friendly `renderMarkdown` lock-in — Typora-shaped
+`**注意：**这是正文` (and CJK flanking / punctuation) must not emit `&#x…`
+numeric escapes; `cjkFriendlyToMarkdown()` stays on the dialect path.
 
 ## Correctness goals
 
@@ -175,6 +178,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **9** (done) | Table delimiter widening (vault three-dash; content unpadded) |
 | **10** (done) | Line-prefix offset alignment (micromark parity) |
 | **11** (done) | `sourceEditBetween` + `reparseFromText` host helpers |
+| **12** (done) | CJK emphasis / Typora interop lock-in (`renderMarkdown`) |
 
 ## Replace boundary
 
