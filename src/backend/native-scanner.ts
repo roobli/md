@@ -12,7 +12,8 @@
  * Indented code does not interrupt paragraphs (CommonMark). Phase 10 aligns
  * opening-line offsets with micromark: up to three leading ASCII spaces before
  * a block marker become leading/gap, not span markdown (html / indented-code /
- * frontmatter keep their bytes).
+ * frontmatter keep their bytes). Phase 13: CommonMark lazy continuation keeps
+ * unprefixed paragraph lines inside quotes and list items (micromark parity).
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -480,6 +481,9 @@ export function tryNativeSplit(text: string): SplitDocument {
     // is two quotes (ex. 231). Marker-only blank lines (`>` / `> `) stay
     // inside one quote. Do not merge across unprefixed blanks (Noto #37 /
     // tight adjacent quotes+callouts).
+    // Lazy continuation (Phase 13): a following non-blank line that is not a
+    // block start may omit `>` and still belongs to the quote (ex. 240;
+    // setext `===` stays inside; `---` / lists / ATX / fences end the quote).
     if (isBlockQuote(line.content)) {
       const start = spanStartAfterPrefix(line);
       let j = i + 1;
@@ -489,7 +493,9 @@ export function tryNativeSplit(text: string): SplitDocument {
           j += 1;
           continue;
         }
-        break;
+        if (isBlank(next.content)) break;
+        if (isBlockStart(next.content)) break;
+        j += 1;
       }
       const end = lines[j - 1]!.next;
       raw.push({ kind: 'quote', start, end });
@@ -546,6 +552,12 @@ export function tryNativeSplit(text: string): SplitDocument {
           break;
         }
         if (indentOf(next.content) >= 2) {
+          j += 1;
+          continue;
+        }
+        // CommonMark lazy continuation of a list-item paragraph (Phase 13):
+        // unindented lines that are not block starts stay in the list.
+        if (!isBlockStart(next.content)) {
           j += 1;
           continue;
         }

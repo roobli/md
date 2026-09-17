@@ -16,7 +16,9 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 12 shipped** — CJK emphasis / Typora interop lock-in:
+**Phase 13 shipped** — CommonMark lazy continuation in the native split:
+unprefixed paragraph lines stay inside quotes and list items (micromark
+parity). **Phase 12** — CJK emphasis / Typora interop lock-in:
 `renderMarkdown` keeps Typora-shaped `**注意：**…` without numeric-escaping
 Chinese flanking. **Phase 11** — `sourceEditBetween` + `reparseFromText` so
 hosts with a prior split and a full next buffer can incremental-reparse without

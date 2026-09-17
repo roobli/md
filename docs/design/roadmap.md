@@ -19,6 +19,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **10** | **Done** | Line-prefix offset alignment: up to three leading ASCII spaces before a block marker land in leading/gaps (micromark parity); html / indented-code / frontmatter unchanged. |
 | **11** | **Done** | Host helpers: `sourceEditBetween` + `reparseFromText` — derive a contiguous `SourceEdit` from prior/next full buffers and incremental-reparse without a hand-built edit or ordinals. |
 | **12** | **Done** | CJK emphasis / Typora interop lock-in: `renderMarkdown` keeps Typora-shaped `**注意：**…` without numeric-escaping Chinese flanking. |
+| **13** | **Done** | CommonMark **lazy continuation** in native split: unprefixed paragraph lines stay inside **quotes** and **list items** (micromark parity; setext `===` in quotes; `---` / ATX / fences / new list markers still end the block). |
 
 ## Phase 1 acceptance (this slice)
 
@@ -171,3 +172,15 @@ broader golden gates on the Noto side (host-owned, not this package).
 
 Phase 12 **shipped** on `main` (v0.1.8). Remaining optional engine work: further
 Typora interop notes if newly measured. Noto golden / default-on stays host-side.
+
+## Phase 13 acceptance
+
+- [x] Quote spans absorb non-blank, non-`isBlockStart` lines without a `>` marker
+      (paragraph + list-item lazy; setext `===` stays in-quote; blank still ends)
+- [x] List spans absorb unindented lazy paragraph continuations (bullet / ordered /
+      nested); a following list/ATX/fence/hr/quote marker still starts a new block
+- [x] Tests vs prior micromark-shaped fixtures; `joinSplit` identity preserved
+- [x] Contract + README + roadmap updated; package `0.1.9`
+
+Phase 13 **shipped** on `main` (v0.1.9). Noto host IR→PM / golden adoption of
+no-`>` lazy quotes and unindented list soft-wrap is host-side.
