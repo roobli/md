@@ -218,6 +218,66 @@ describe('tryNativeSplit', () => {
     expect(tryNativeSplit(two)!.spans[0]!.markdown).toBe('- foo\n- bar');
   });
 
+  it('Phase 14: footnote/link-def lazy continuation', () => {
+    const fn = '[^1]: first\nlazy line\n';
+    const fnSplit = tryNativeSplit(fn)!;
+    expect(joinSplit(fnSplit)).toBe(fn);
+    expect(fnSplit.spans.map((s) => s.kind)).toEqual(['footnote-definition']);
+    expect(fnSplit.spans[0]!.markdown).toBe('[^1]: first\nlazy line');
+
+    // Indented title/body still works; blank still ends the definition.
+    const titled = '[foo]: /url\n  "title"\n\nAfter\n';
+    const titledSplit = tryNativeSplit(titled)!;
+    expect(joinSplit(titledSplit)).toBe(titled);
+    expect(titledSplit.spans.map((s) => s.kind)).toEqual(['link-definition', 'paragraph']);
+    expect(titledSplit.spans[0]!.markdown).toBe('[foo]: /url\n  "title"');
+
+    // A following block start is not lazy-absorbed.
+    const atx = '[^1]: first\n# Heading\n';
+    expect(tryNativeSplit(atx)!.spans.map((s) => s.kind)).toEqual([
+      'footnote-definition',
+      'heading',
+    ]);
+  });
+
+  it('Phase 14: GFM tables interrupt paragraphs', () => {
+    const text = 'para\n| a | b |\n| --- | --- |\n';
+    const split = tryNativeSplit(text)!;
+    expect(joinSplit(split)).toBe(text);
+    expect(split.spans.map((s) => s.kind)).toEqual(['paragraph', 'table']);
+    expect(split.spans[0]!.markdown).toBe('para');
+    expect(split.spans[1]!.markdown).toBe('| a | b |\n| --- | --- |');
+
+    // Lone pipe lines without a delimiter row stay in the paragraph.
+    const pipes = 'para\n| not a table\n';
+    const pipesSplit = tryNativeSplit(pipes)!;
+    expect(pipesSplit.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(pipesSplit.spans[0]!.markdown).toBe('para\n| not a table');
+  });
+
+  it('Phase 14: list continues after blank when next content is indented', () => {
+    const table = '- item\n\n  | a | b |\n  | - | - |\n  | 1 | 2 |\n';
+    const tableSplit = tryNativeSplit(table)!;
+    expect(joinSplit(tableSplit)).toBe(table);
+    expect(tableSplit.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(tableSplit.spans[0]!.markdown).toBe(
+      '- item\n\n  | a | b |\n  | - | - |\n  | 1 | 2 |',
+    );
+
+    const code = '1. hi\n\n    code\n    more\n';
+    const codeSplit = tryNativeSplit(code)!;
+    expect(joinSplit(codeSplit)).toBe(code);
+    expect(codeSplit.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+    expect(codeSplit.spans[0]!.markdown).toBe('1. hi\n\n    code\n    more');
+
+    // Unindented content after a blank still ends the list.
+    const after = '- item\n\nAfter\n';
+    expect(tryNativeSplit(after)!.spans.map((s) => s.kind)).toEqual([
+      'bullet-list',
+      'paragraph',
+    ]);
+  });
+
     it('natively splits display math $$ with exact offsets', () => {
     const text = '$$\n\\sum_i x_i\n$$\n\nAfter\n';
     const split = tryNativeSplit(text);
