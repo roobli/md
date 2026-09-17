@@ -293,6 +293,9 @@ function isBlockStart(content: string): boolean {
   if (isListItem(content)) return true;
   if (displayMathOpen(content)) return true;
   if (htmlInterruptsParagraph(content)) return true;
+  // Adjacent link/footnote definitions are new blocks, not lazy text under the
+  // previous definition (micromark / CommonMark; Noto link-defs.md golden).
+  if (definitionOpen(content)) return true;
   return false;
 }
 
