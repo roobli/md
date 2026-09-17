@@ -156,6 +156,68 @@ describe('tryNativeSplit', () => {
     expect(split!.spans[0]!.markdown).toBe('> foo\n>\n> bar');
   });
 
+  it('keeps CommonMark lazy continuation inside quotes (Phase 13)', () => {
+    const para = '> foo\nbar\n\nAfter\n';
+    const paraSplit = tryNativeSplit(para)!;
+    expect(joinSplit(paraSplit)).toBe(para);
+    expect(paraSplit.spans.map((s) => s.kind)).toEqual(['quote', 'paragraph']);
+    expect(paraSplit.spans[0]!.markdown).toBe('> foo\nbar');
+
+    const list = '> - foo\nbar\n\nAfter\n';
+    const listSplit = tryNativeSplit(list)!;
+    expect(joinSplit(listSplit)).toBe(list);
+    expect(listSplit.spans.map((s) => s.kind)).toEqual(['quote', 'paragraph']);
+    expect(listSplit.spans[0]!.markdown).toBe('> - foo\nbar');
+
+    const setext = '> foo\n===\n\nAfter\n';
+    const setextSplit = tryNativeSplit(setext)!;
+    expect(setextSplit.spans.map((s) => s.kind)).toEqual(['quote', 'paragraph']);
+    expect(setextSplit.spans[0]!.markdown).toBe('> foo\n===');
+
+    // Block starts still end the quote (micromark parity).
+    const hr = '> foo\n---\n\nAfter\n';
+    expect(tryNativeSplit(hr)!.spans.map((s) => s.kind)).toEqual([
+      'quote',
+      'thematic-break',
+      'paragraph',
+    ]);
+    const atx = '> foo\n# bar\n\nAfter\n';
+    expect(tryNativeSplit(atx)!.spans.map((s) => s.kind)).toEqual([
+      'quote',
+      'heading',
+      'paragraph',
+    ]);
+    const outerList = '> - foo\n- bar\n\nAfter\n';
+    expect(tryNativeSplit(outerList)!.spans.map((s) => s.kind)).toEqual([
+      'quote',
+      'bullet-list',
+      'paragraph',
+    ]);
+  });
+
+  it('keeps CommonMark lazy continuation inside lists (Phase 13)', () => {
+    const bullet = '- foo\nbar\n\nAfter\n';
+    const bulletSplit = tryNativeSplit(bullet)!;
+    expect(joinSplit(bulletSplit)).toBe(bullet);
+    expect(bulletSplit.spans.map((s) => s.kind)).toEqual(['bullet-list', 'paragraph']);
+    expect(bulletSplit.spans[0]!.markdown).toBe('- foo\nbar');
+
+    const ordered = '1. foo\nbar\n\nAfter\n';
+    const orderedSplit = tryNativeSplit(ordered)!;
+    expect(orderedSplit.spans.map((s) => s.kind)).toEqual(['ordered-list', 'paragraph']);
+    expect(orderedSplit.spans[0]!.markdown).toBe('1. foo\nbar');
+
+    const nested = '- foo\n  - bar\nbaz\n\nAfter\n';
+    const nestedSplit = tryNativeSplit(nested)!;
+    expect(nestedSplit.spans.map((s) => s.kind)).toEqual(['bullet-list', 'paragraph']);
+    expect(nestedSplit.spans[0]!.markdown).toBe('- foo\n  - bar\nbaz');
+
+    // A following list marker is a new block, not lazy text.
+    const two = '- foo\n- bar\n';
+    expect(tryNativeSplit(two)!.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(tryNativeSplit(two)!.spans[0]!.markdown).toBe('- foo\n- bar');
+  });
+
     it('natively splits display math $$ with exact offsets', () => {
     const text = '$$\n\\sum_i x_i\n$$\n\nAfter\n';
     const split = tryNativeSplit(text);

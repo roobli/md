@@ -137,6 +137,11 @@ ASCII spaces → leading/gaps; html / indented-code / frontmatter unchanged).
 `**注意：**这是正文` (and CJK flanking / punctuation) must not emit `&#x…`
 numeric escapes; `cjkFriendlyToMarkdown()` stays on the dialect path.
 
+**Phase 13**: Native split CommonMark lazy continuation — unprefixed paragraph
+lines stay inside quote and list spans (micromark parity). Blank lines still
+end quotes; block starts (`#`, fences, `---`, list markers, …) still open a
+new sibling block. Setext `===` after a quote line stays in-quote.
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
