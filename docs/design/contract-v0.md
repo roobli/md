@@ -142,6 +142,11 @@ lines stay inside quote and list spans (micromark parity). Blank lines still
 end quotes; block starts (`#`, fences, `---`, list markers, …) still open a
 new sibling block. Setext `===` after a quote line stays in-quote.
 
+**Phase 14**: Nest / interrupt parity — footnote/link-definition lazy
+continuations; GFM tables interrupt paragraphs (two-line look-ahead only);
+after a blank inside a list, indented nested content (table rows, indented
+code) stays in the list span (micromark parity).
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
@@ -184,6 +189,8 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **10** (done) | Line-prefix offset alignment (micromark parity) |
 | **11** (done) | `sourceEditBetween` + `reparseFromText` host helpers |
 | **12** (done) | CJK emphasis / Typora interop lock-in (`renderMarkdown`) |
+| **13** (done) | CommonMark lazy continuation (quotes + list items) |
+| **14** (done) | Nest / interrupt parity (defs / table-vs-para / list-after-blank) |
 
 ## Replace boundary
 

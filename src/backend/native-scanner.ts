@@ -14,6 +14,8 @@
  * a block marker become leading/gap, not span markdown (html / indented-code /
  * frontmatter keep their bytes). Phase 13: CommonMark lazy continuation keeps
  * unprefixed paragraph lines inside quotes and list items (micromark parity).
+ * Phase 14: definition lazy continuations; GFM tables interrupt paragraphs;
+ * lists keep indented nested blocks after a blank (micromark nest/interrupt parity).
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -430,11 +432,16 @@ export function tryNativeSplit(text: string): SplitDocument {
     if (def) {
       const start = spanStartAfterPrefix(line);
       let j = i + 1;
-      // Continuations: indented non-blank lines (title / footnote body)
+      // Continuations: indented non-blank lines (title / footnote body), then
+      // lazy unindented non-block-starts (Phase 14; micromark footnote parity).
       while (j < lines.length) {
         const next = lines[j]!;
         if (isBlank(next.content)) break;
         if (indentOf(next.content) >= 1) {
+          j += 1;
+          continue;
+        }
+        if (!isBlockStart(next.content)) {
           j += 1;
           continue;
         }
@@ -542,10 +549,18 @@ export function tryNativeSplit(text: string): SplitDocument {
         if (isBlank(next.content)) {
           let k = j + 1;
           while (k < lines.length && isBlank(lines[k]!.content)) k += 1;
-          if (k < lines.length && isListItem(lines[k]!.content)) {
+          if (k >= lines.length) break;
+          if (isListItem(lines[k]!.content)) {
             const nextOrdered = orderedMarker(lines[k]!.content) !== null;
             if (nextOrdered !== ordered) break;
             if (isTaskListItem(lines[k]!.content)) hasTask = true;
+            j = k;
+            continue;
+          }
+          // Phase 14: after a blank, indented nested blocks (table rows,
+          // indented-code, nested paragraphs) stay inside the list span
+          // (CommonMark list-item nested content; micromark parity).
+          if (indentOf(lines[k]!.content) >= 2) {
             j = k;
             continue;
           }
@@ -605,6 +620,9 @@ export function tryNativeSplit(text: string): SplitDocument {
         const next = lines[j]!;
         if (isBlank(next.content)) break;
         if (isBlockStart(next.content)) break;
+        // Phase 14: GFM tables interrupt paragraphs (two-line look-ahead only;
+        // do not treat every pipe line as isBlockStart).
+        if (looksLikeTable(lines, j)) break;
         if (isSetextUnderline(next.content)) {
           const end = next.next;
           raw.push({ kind: 'heading', start, end });
