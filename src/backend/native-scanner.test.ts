@@ -238,6 +238,17 @@ describe('tryNativeSplit', () => {
       'footnote-definition',
       'heading',
     ]);
+
+    // Adjacent definitions stay separate spans (not absorbed as lazy text).
+    const twoLinks = '[alpha]: https://example.com/alpha "Alpha Title"\n[shortcut]: https://example.com/shortcut\n';
+    const twoSplit = tryNativeSplit(twoLinks)!;
+    expect(joinSplit(twoSplit)).toBe(twoLinks);
+    expect(twoSplit.spans.map((s) => s.kind)).toEqual([
+      'link-definition',
+      'link-definition',
+    ]);
+    expect(twoSplit.spans[0]!.markdown).toBe('[alpha]: https://example.com/alpha "Alpha Title"');
+    expect(twoSplit.spans[1]!.markdown).toBe('[shortcut]: https://example.com/shortcut');
   });
 
   it('Phase 14: GFM tables interrupt paragraphs', () => {

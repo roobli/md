@@ -198,5 +198,5 @@ no-`>` lazy quotes and unindented list soft-wrap is host-side.
 - [x] Tests for all three cases (`joinSplit` identity + kind sequences); package
       `0.1.10`
 
-Phase 14 **shipped** on `main` (v0.1.10). Noto host IR→PM / golden adoption of
+Phase 14 **shipped** on `main` (v0.1.10). **v0.1.11**: adjacent link/footnote definitions are `isBlockStart` so they are not absorbed as definition-lazy text. Noto host IR→PM / golden adoption of
 table-interrupt and list-nested indented blocks is host-side.
