@@ -16,9 +16,11 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 14 shipped** — nest / interrupt parity vs micromark: definition lazy
-continuations, GFM tables interrupt paragraphs, and lists keep indented nested
-blocks after a blank. **Phase 13** — CommonMark lazy continuation in the native
+**Phase 15 shipped** — CommonMark setext level-2 (`text` + continuous `---`)
+vs thematic-break parity (Noto intentional golden gap #1). **Phase 14** — nest /
+interrupt parity vs micromark: definition lazy continuations, GFM tables
+interrupt paragraphs, and lists keep indented nested blocks after a blank.
+**Phase 13** — CommonMark lazy continuation in the native
 split: unprefixed paragraph lines stay inside quotes and list items. **Phase 12** — CJK emphasis / Typora interop lock-in:
 `renderMarkdown` keeps Typora-shaped `**注意：**…` without numeric-escaping
 Chinese flanking. **Phase 11** — `sourceEditBetween` + `reparseFromText` so
@@ -40,13 +42,14 @@ thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
+**v0.1.12** — setext-`---` vs hr. **v0.1.11** — adjacent defs as block starts.
 **v0.1.10** — nest / interrupt parity. **v0.1.9** — lazy continuation.
 **v0.1.8** — CJK / Typora-shaped strong lock-in. **v0.1.7** —
 `sourceEditBetween` / `reparseFromText`. **v0.1.6** line-prefix offset
 alignment. **v0.1.5** table delimiter widening. **v0.1.4** verbatim runs + bare
 autolink. **v0.1.3** hard-break + list-marker; **v0.1.2** native indented-code;
 **v0.1.1** quote/callout split.
-Noto may pin `github:roobli/md#v0.1.10` when ready.
+Noto may pin `github:roobli/md#v0.1.12` when ready.
 
 See:
 

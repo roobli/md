@@ -622,10 +622,10 @@ export function tryNativeSplit(text: string): SplitDocument {
       while (j < lines.length) {
         const next = lines[j]!;
         if (isBlank(next.content)) break;
-        if (isBlockStart(next.content)) break;
-        // Phase 14: GFM tables interrupt paragraphs (two-line look-ahead only;
-        // do not treat every pipe line as isBlockStart).
-        if (looksLikeTable(lines, j)) break;
+        // Phase 15: continuous setext underline (`===` / `---`) absorbs as
+        // heading before thematic-break / other isBlockStart wins. Spaced
+        // markers (`- - -`) and `*`/`_` remain thematic via isBlockStart.
+        // Standalone / top-of-doc `---` still hits the thematic path above.
         if (isSetextUnderline(next.content)) {
           const end = next.next;
           raw.push({ kind: 'heading', start, end });
@@ -633,6 +633,10 @@ export function tryNativeSplit(text: string): SplitDocument {
           j = -1;
           break;
         }
+        if (isBlockStart(next.content)) break;
+        // Phase 14: GFM tables interrupt paragraphs (two-line look-ahead only;
+        // do not treat every pipe line as isBlockStart).
+        if (looksLikeTable(lines, j)) break;
         j += 1;
       }
       if (j === -1) continue;

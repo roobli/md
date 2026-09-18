@@ -147,6 +147,12 @@ continuations; GFM tables interrupt paragraphs (two-line look-ahead only);
 after a blank inside a list, indented nested content (table rows, indented
 code) stays in the list span (micromark parity).
 
+**Phase 15**: Setext level-2 vs thematic-break — while extending a paragraph,
+continuous `---` / `===` underlines (`isSetextUnderline`) absorb as `heading`
+before `isBlockStart` treats `---` as thematic. Spaced `- - -` and `*`/`_`
+markers stay thematic; standalone `---` / frontmatter unchanged. Closes Noto
+intentional golden gap #1 (setext-`---` vs hr).
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
