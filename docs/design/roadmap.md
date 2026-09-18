@@ -21,6 +21,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **12** | **Done** | CJK emphasis / Typora interop lock-in: `renderMarkdown` keeps Typora-shaped `**注意：**…` without numeric-escaping Chinese flanking. |
 | **13** | **Done** | CommonMark **lazy continuation** in native split: unprefixed paragraph lines stay inside **quotes** and **list items** (micromark parity; setext `===` in quotes; `---` / ATX / fences / new list markers still end the block). |
 | **14** | **Done** | Nest / interrupt parity vs micromark: **definition lazy** continuations; **GFM tables interrupt paragraphs**; lists keep **indented nested blocks after a blank** (tables / indented-code stay inside the list span). |
+| **15** | **Done** | CommonMark **setext level-2** (`text` + continuous `---`) vs thematic-break parity: while extending a paragraph, `isSetextUnderline` wins before `isBlockStart` / thematic; spaced `- - -` / `***` / `___` stay thematic; standalone `---` unchanged. Closes Noto intentional golden gap #1. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -200,3 +201,17 @@ no-`>` lazy quotes and unindented list soft-wrap is host-side.
 
 Phase 14 **shipped** on `main` (v0.1.10). **v0.1.11**: adjacent link/footnote definitions are `isBlockStart` so they are not absorbed as definition-lazy text. Noto host IR→PM / golden adoption of
 table-interrupt and list-nested indented blocks is host-side.
+
+## Phase 15 acceptance
+
+- [x] While extending a paragraph, continuous setext underline (`===` / `---+`)
+      becomes a `heading` before thematic-break / other `isBlockStart` wins
+- [x] Spaced thematic markers after a paragraph (`- - -`, `***`, `___`) stay
+      `thematic-break`; standalone / top-of-doc `---` unchanged
+- [x] Quote lazy path still ends on `---` (Phase 13 micromark parity); no
+      Phase 13/14 regressions
+- [x] Tests in `native-scanner.test.ts` (`joinSplit` identity); package `0.1.12`
+- [x] Closes Noto intentional golden diff #1 (setext-`---` vs hr) on the engine side
+
+Phase 15 **shipped** on `main` (v0.1.12). Noto host golden / IR→PM adoption of
+setext-`---` headings remains host-side.

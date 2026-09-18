@@ -55,6 +55,39 @@ describe('tryNativeSplit', () => {
     expect(split!.spans.map((s) => s.kind)).toEqual(['ordered-list', 'heading']);
   });
 
+  it('Phase 15: setext --- after paragraph is heading (not thematic)', () => {
+    const h2 = 'Hello\n---\n';
+    const h2Split = tryNativeSplit(h2)!;
+    expect(joinSplit(h2Split)).toBe(h2);
+    expect(h2Split.spans.map((s) => s.kind)).toEqual(['heading']);
+    expect(h2Split.spans[0]!.markdown).toBe('Hello\n---');
+
+    const thenPara = 'a\n---\nb\n';
+    const thenSplit = tryNativeSplit(thenPara)!;
+    expect(joinSplit(thenSplit)).toBe(thenPara);
+    expect(thenSplit.spans.map((s) => s.kind)).toEqual(['heading', 'paragraph']);
+    expect(thenSplit.spans[0]!.markdown).toBe('a\n---');
+    expect(thenSplit.spans[1]!.markdown).toBe('b');
+
+    // === already worked; keep regression.
+    const eq = 'Title\n===\n';
+    const eqSplit = tryNativeSplit(eq)!;
+    expect(joinSplit(eqSplit)).toBe(eq);
+    expect(eqSplit.spans.map((s) => s.kind)).toEqual(['heading']);
+
+    // Spaced thematic / star / underscore still thematic after a paragraph.
+    for (const line of ['- - -', '***', '___'] as const) {
+      const text = `Hello\n${line}\n`;
+      const split = tryNativeSplit(text)!;
+      expect(joinSplit(split)).toBe(text);
+      expect(split.spans.map((s) => s.kind)).toEqual(['paragraph', 'thematic-break']);
+    }
+
+    // Standalone --- remains thematic (and frontmatter still opens on ---).
+    const alone = '---\n';
+    expect(tryNativeSplit(alone)!.spans.map((s) => s.kind)).toEqual(['thematic-break']);
+  });
+
   it('natively splits GFM tables with exact offsets', () => {
     const text = '| a | b |\n| - | - |\n| 1 | 2 |\n';
     const split = tryNativeSplit(text);
