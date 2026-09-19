@@ -16,6 +16,9 @@
  * unprefixed paragraph lines inside quotes and list items (micromark parity).
  * Phase 14: definition lazy continuations; GFM tables interrupt paragraphs;
  * lists keep indented nested blocks after a blank (micromark nest/interrupt parity).
+ * Phase 15: setext `---` vs thematic-break while extending paragraphs.
+ * Phase 16: mixed-marker nested lists stay one span when indented to the
+ * parent item content column (micromark parity; Noto intentional golden gap #2).
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -539,13 +542,39 @@ export function tryNativeSplit(text: string): SplitDocument {
       const ordered = orderedMarker(line.content) !== null;
       let hasTask = isTaskListItem(line.content);
       const start = spanStartAfterPrefix(line);
+      // Content column after the current sibling item's marker. Mixed-marker
+      // nests must reach this indent (CommonMark / micromark); same-family
+      // siblings update it. Phase 16.
+      const openingMarker = (orderedMarker(line.content) ?? bulletMarker(line.content))!;
+      let nestIndent = openingMarker[0].length;
       let j = i + 1;
+
+      /** Absorb a list-item line into this span, or signal break. */
+      const absorbListItem = (content: string): 'keep' | 'break' => {
+        const marker = orderedMarker(content) ?? bulletMarker(content);
+        if (!marker) return 'break';
+        const nextOrdered = orderedMarker(content) !== null;
+        const nextIndent = indentOf(content);
+        const nested = nextIndent >= nestIndent;
+        if (nextOrdered !== ordered) {
+          // Phase 16: indented mixed-marker nest stays in this span.
+          if (!nested) return 'break';
+          return 'keep';
+        }
+        // Same-family: siblings (indent < nestIndent) may flip task-list and
+        // refresh nestIndent; nested same-family keep parent nestIndent so a
+        // later mixed nest under the parent still matches micromark.
+        if (!nested) {
+          if (isTaskListItem(content)) hasTask = true;
+          nestIndent = marker[0].length;
+        }
+        return 'keep';
+      };
+
       while (j < lines.length) {
         const next = lines[j]!;
         if (isListItem(next.content)) {
-          const nextOrdered = orderedMarker(next.content) !== null;
-          if (nextOrdered !== ordered) break;
-          if (isTaskListItem(next.content)) hasTask = true;
+          if (absorbListItem(next.content) === 'break') break;
           j += 1;
           continue;
         }
@@ -554,9 +583,7 @@ export function tryNativeSplit(text: string): SplitDocument {
           while (k < lines.length && isBlank(lines[k]!.content)) k += 1;
           if (k >= lines.length) break;
           if (isListItem(lines[k]!.content)) {
-            const nextOrdered = orderedMarker(lines[k]!.content) !== null;
-            if (nextOrdered !== ordered) break;
-            if (isTaskListItem(lines[k]!.content)) hasTask = true;
+            if (absorbListItem(lines[k]!.content) === 'break') break;
             j = k;
             continue;
           }

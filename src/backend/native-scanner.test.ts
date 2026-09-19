@@ -88,6 +88,59 @@ describe('tryNativeSplit', () => {
     expect(tryNativeSplit(alone)!.spans.map((s) => s.kind)).toEqual(['thematic-break']);
   });
 
+  it('Phase 16: mixed-marker nested lists stay one span (micromark parity)', () => {
+    const orderedBullet = '1. outer\n   - nested\n2. outer two\n';
+    const ob = tryNativeSplit(orderedBullet)!;
+    expect(joinSplit(ob)).toBe(orderedBullet);
+    expect(ob.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+    expect(ob.spans[0]!.markdown).toBe('1. outer\n   - nested\n2. outer two');
+
+    const bulletOrdered = '- outer\n  1. nested\n- outer two\n';
+    const bo = tryNativeSplit(bulletOrdered)!;
+    expect(joinSplit(bo)).toBe(bulletOrdered);
+    expect(bo.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(bo.spans[0]!.markdown).toBe('- outer\n  1. nested\n- outer two');
+
+    const multi = '1. outer\n   - nested a\n   - nested b\n2. outer two\n';
+    expect(tryNativeSplit(multi)!.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+    expect(tryNativeSplit(multi)!.spans[0]!.markdown).toBe(
+      '1. outer\n   - nested a\n   - nested b\n2. outer two',
+    );
+
+    const deep = '1. outer\n   - nested\n     1. deep ordered\n2. outer two\n';
+    expect(tryNativeSplit(deep)!.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+    expect(tryNativeSplit(deep)!.spans[0]!.markdown).toBe(
+      '1. outer\n   - nested\n     1. deep ordered\n2. outer two',
+    );
+
+    // Blank then indented mixed nest stays in the list.
+    const blankNest = '1. outer\n\n   - nested\n2. two\n';
+    const bn = tryNativeSplit(blankNest)!;
+    expect(joinSplit(bn)).toBe(blankNest);
+    expect(bn.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+    expect(bn.spans[0]!.markdown).toBe('1. outer\n\n   - nested\n2. two');
+
+    // Nested task under ordered stays ordered-list (kind follows outer siblings).
+    const taskNest = '1. outer\n   - [ ] nested task\n2. two\n';
+    expect(tryNativeSplit(taskNest)!.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+
+    // Insufficient indent: mixed marker starts a new list (micromark).
+    const split2 = '1. a\n  - b\n';
+    expect(tryNativeSplit(split2)!.spans.map((s) => s.kind)).toEqual([
+      'ordered-list',
+      'bullet-list',
+    ]);
+    const split0 = '1. a\n- b\n';
+    expect(tryNativeSplit(split0)!.spans.map((s) => s.kind)).toEqual([
+      'ordered-list',
+      'bullet-list',
+    ]);
+
+    // Same-family nest still one span.
+    const same = '- a\n  - b\n- c\n';
+    expect(tryNativeSplit(same)!.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+  });
+
   it('natively splits GFM tables with exact offsets', () => {
     const text = '| a | b |\n| - | - |\n| 1 | 2 |\n';
     const split = tryNativeSplit(text);
