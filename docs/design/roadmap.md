@@ -215,3 +215,18 @@ table-interrupt and list-nested indented blocks is host-side.
 
 Phase 15 **shipped** on `main` (v0.1.12). Noto host golden / IR→PM adoption of
 setext-`---` headings remains host-side.
+
+## Phase 16 acceptance
+
+- [x] Mixed-marker nested lists (bullet under ordered / ordered under bullet)
+      stay one span when the nest reaches the parent item content column
+      (CommonMark / micromark); insufficient indent still opens a new list
+- [x] Blank-then-indented mixed nest continues the parent list; nested tasks do
+      not flip the outer span to `task-list` unless a sibling item is a task
+- [x] Same-family nesting unchanged; `joinSplit` identity + kind sequences in
+      `native-scanner.test.ts`; package `0.1.13`
+- [x] Closes Noto intentional golden diff #2 (mixed-marker nested lists) on the
+      engine side
+
+Phase 16 **shipped** on `main` (v0.1.13). Noto host golden / IR→PM adoption of
+cross-family nests remains host-side.

@@ -153,6 +153,11 @@ before `isBlockStart` treats `---` as thematic. Spaced `- - -` and `*`/`_`
 markers stay thematic; standalone `---` / frontmatter unchanged. Closes Noto
 intentional golden gap #1 (setext-`---` vs hr).
 
+**Phase 16**: Mixed-marker nested lists — while extending a list, a different
+family list item whose indent reaches the current sibling content column stays
+in the same span (micromark nest parity). Unindented / under-indented mixed
+markers still open a new list. Closes Noto intentional golden gap #2.
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
