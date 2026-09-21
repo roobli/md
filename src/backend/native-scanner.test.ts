@@ -141,6 +141,43 @@ describe('tryNativeSplit', () => {
     expect(tryNativeSplit(same)!.spans.map((s) => s.kind)).toEqual(['bullet-list']);
   });
 
+  it('Phase 17: GFM table header/delimiter column-count parity', () => {
+    // Delim cells < header → not a table (micromark paragraph).
+    const fewer = '| a | b |\n| --- |\n| 1 | 2 |\n';
+    const fewerSplit = tryNativeSplit(fewer)!;
+    expect(joinSplit(fewerSplit)).toBe(fewer);
+    expect(fewerSplit.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(fewerSplit.spans[0]!.markdown).toBe('| a | b |\n| --- |\n| 1 | 2 |');
+
+    // Delim cells > header → not a table.
+    const more = '| a |\n| --- | --- |\n| 1 | 2 |\n';
+    const moreSplit = tryNativeSplit(more)!;
+    expect(joinSplit(moreSplit)).toBe(more);
+    expect(moreSplit.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(moreSplit.spans[0]!.markdown).toBe('| a |\n| --- | --- |\n| 1 | 2 |');
+
+    // Matching counts → still one table span.
+    const match = '| a | b |\n| --- | --- |\n| 1 | 2 |\n';
+    const matchSplit = tryNativeSplit(match)!;
+    expect(joinSplit(matchSplit)).toBe(match);
+    expect(matchSplit.spans.map((s) => s.kind)).toEqual(['table']);
+    expect(matchSplit.spans[0]!.markdown).toBe('| a | b |\n| --- | --- |\n| 1 | 2 |');
+
+    // Ragged body with matching header/delim stays table (micromark parity).
+    const ragged = '| a | b |\n| --- | --- |\n| 1 |\n';
+    const raggedSplit = tryNativeSplit(ragged)!;
+    expect(joinSplit(raggedSplit)).toBe(ragged);
+    expect(raggedSplit.spans.map((s) => s.kind)).toEqual(['table']);
+    expect(raggedSplit.spans[0]!.markdown).toBe('| a | b |\n| --- | --- |\n| 1 |');
+
+    // Mismatched counts must not interrupt a preceding paragraph as a table.
+    const interrupt = 'para\n| a | b |\n| --- |\n';
+    const interruptSplit = tryNativeSplit(interrupt)!;
+    expect(joinSplit(interruptSplit)).toBe(interrupt);
+    expect(interruptSplit.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(interruptSplit.spans[0]!.markdown).toBe('para\n| a | b |\n| --- |');
+  });
+
   it('natively splits GFM tables with exact offsets', () => {
     const text = '| a | b |\n| - | - |\n| 1 | 2 |\n';
     const split = tryNativeSplit(text);

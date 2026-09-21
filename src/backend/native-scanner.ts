@@ -19,6 +19,9 @@
  * Phase 15: setext `---` vs thematic-break while extending paragraphs.
  * Phase 16: mixed-marker nested lists stay one span when indented to the
  * parent item content column (micromark parity; Noto intentional golden gap #2).
+ * Phase 17: GFM table header/delimiter column-count parity — looksLikeTable
+ * only when delimiter cell count equals header (micromark/GFM); ragged body
+ * rows still absorb once a table is open.
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -165,16 +168,95 @@ function isBlockQuote(content: string): boolean {
   return /^\s{0,3}>/.test(content);
 }
 
+/**
+ * Split a GFM table row into cells the way micromark effectively counts them
+ * for header↔delimiter parity: leading/trailing pipes are optional markers
+ * (empty edge cells from outer pipes are ignored); interior empties count;
+ * `\|` does not divide.
+ */
+function tableRowCells(content: string): string[] | null {
+  let i = 0;
+  while (i < content.length && (content[i] === ' ' || content[i] === '\t')) {
+    i += 1;
+  }
+  const body = content.slice(i);
+  // Trim trailing whitespace so `| a |  ` still treats the final pipe as edge.
+  let end = body.length;
+  while (end > 0 && (body[end - 1] === ' ' || body[end - 1] === '\t')) {
+    end -= 1;
+  }
+  const row = body.slice(0, end);
+  if (!row.includes('|')) return null;
+
+  const cells: string[] = [];
+  let current = '';
+  let escaped = false;
+  let start = 0;
+  if (row[0] === '|') start = 1;
+
+  for (let j = start; j < row.length; j += 1) {
+    const ch = row[j]!;
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      current += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '|') {
+      cells.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+
+  // Trailing pipe: final empty edge cell is ignored. Otherwise keep the last cell.
+  if (!row.endsWith('|')) {
+    cells.push(current);
+  }
+
+  // Micromark rejects a head row that is only a single pipe (ignoring spaces).
+  if (cells.length === 0) return null;
+  return cells;
+}
+
+/** Delimiter cell: optional align colons around ≥1 continuous dashes. */
+function isDelimiterCell(cell: string): boolean {
+  return /^\s*:?-{1,}:?\s*$/.test(cell);
+}
+
+function countHeaderCells(content: string): number | null {
+  const cells = tableRowCells(content);
+  if (!cells) return null;
+  return cells.length;
+}
+
+function countDelimiterCells(content: string): number | null {
+  const cells = tableRowCells(content);
+  if (!cells) return null;
+  // Micromark requires a `|` or `:` somewhere (pure `---` is thematic/setext).
+  if (!/[|:]/.test(content)) return null;
+  if (!cells.every(isDelimiterCell)) return null;
+  return cells.length;
+}
+
 function looksLikeTable(lines: Line[], index: number): boolean {
   const line = lines[index];
   if (!line || !line.content.includes('|')) return false;
   const next = lines[index + 1];
   if (!next) return false;
-  return isTableDelimiter(next.content);
+  const headerCount = countHeaderCells(line.content);
+  const delimCount = countDelimiterCells(next.content);
+  if (headerCount === null || delimCount === null) return false;
+  return headerCount === delimCount;
 }
 
 function isTableDelimiter(content: string): boolean {
-  return /^\s*\|?[:| \t-]+\|[:| \t-]*$/.test(content) && /-/.test(content);
+  return countDelimiterCells(content) !== null;
 }
 
 function isTableRow(content: string): boolean {

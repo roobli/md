@@ -22,6 +22,8 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **13** | **Done** | CommonMark **lazy continuation** in native split: unprefixed paragraph lines stay inside **quotes** and **list items** (micromark parity; setext `===` in quotes; `---` / ATX / fences / new list markers still end the block). |
 | **14** | **Done** | Nest / interrupt parity vs micromark: **definition lazy** continuations; **GFM tables interrupt paragraphs**; lists keep **indented nested blocks after a blank** (tables / indented-code stay inside the list span). |
 | **15** | **Done** | CommonMark **setext level-2** (`text` + continuous `---`) vs thematic-break parity: while extending a paragraph, `isSetextUnderline` wins before `isBlockStart` / thematic; spaced `- - -` / `***` / `___` stay thematic; standalone `---` unchanged. Closes Noto intentional golden gap #1. |
+| **16** | **Done** | Mixed-marker nested lists stay one span when indented to the parent item content column (micromark parity; Noto intentional golden gap #2). |
+| **17** | **Done** | GFM **table header/delimiter column-count parity** vs micromark: `looksLikeTable` only when delimiter cell count equals header (leading/trailing pipes optional; empty edge cells ignored); mismatched counts stay paragraph; ragged body with matching header/delim still table. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -230,3 +232,17 @@ setext-`---` headings remains host-side.
 
 Phase 16 **shipped** on `main` (v0.1.13). Noto host golden / IR→PM adoption of
 cross-family nests remains host-side.
+
+## Phase 17 acceptance
+
+- [x] `looksLikeTable` requires header cell count === delimiter cell count
+      (micromark/GFM parity; leading/trailing pipes optional; empty edge cells
+      from outer pipes ignored; delimiter cells are `|---` / `:---` / `---:` /
+      `:---:` style)
+- [x] Delim count ≠ header → not a table (paragraph / `joinSplit` identity);
+      matching counts → one `table` span; ragged body with matching header/delim
+      still table (body absorption unchanged)
+- [x] Paragraph interrupt (Phase 14) uses the tightened `looksLikeTable`
+- [x] Tests in `native-scanner.test.ts`; package `0.1.14`
+
+Phase 17 **shipped** on `main` (v0.1.14).
