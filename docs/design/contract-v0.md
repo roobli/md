@@ -158,6 +158,12 @@ family list item whose indent reaches the current sibling content column stays
 in the same span (micromark nest parity). Unindented / under-indented mixed
 markers still open a new list. Closes Noto intentional golden gap #2.
 
+**Phase 17**: GFM table header/delimiter column-count parity — a table opens
+only when the delimiter row's cell count equals the header's (micromark/GFM).
+Leading/trailing pipes are optional; empty edge cells from outer pipes are
+ignored. Mismatched counts stay paragraph; ragged body rows with a matching
+header/delimiter still form a table.
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
@@ -202,6 +208,9 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **12** (done) | CJK emphasis / Typora interop lock-in (`renderMarkdown`) |
 | **13** (done) | CommonMark lazy continuation (quotes + list items) |
 | **14** (done) | Nest / interrupt parity (defs / table-vs-para / list-after-blank) |
+| **15** (done) | Setext `---` vs thematic-break (Noto golden gap #1) |
+| **16** (done) | Mixed-marker nested lists (Noto golden gap #2) |
+| **17** (done) | GFM table header/delimiter column-count parity |
 
 ## Replace boundary
 
