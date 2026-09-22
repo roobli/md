@@ -164,6 +164,10 @@ Leading/trailing pipes are optional; empty edge cells from outer pipes are
 ignored. Mismatched counts stay paragraph; ragged body rows with a matching
 header/delimiter still form a table.
 
+**Phase 19**: Same-indent sibling list items with a different bullet
+(`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new list span (CommonMark /
+micromark). Indented mixed-marker nests (Phase 16) stay one span.
+
 ## Correctness goals
 
 - CommonMark subset for the block kinds above
@@ -211,6 +215,8 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **15** (done) | Setext `---` vs thematic-break (Noto golden gap #1) |
 | **16** (done) | Mixed-marker nested lists (Noto golden gap #2) |
 | **17** (done) | GFM table header/delimiter column-count parity |
+| **18** (done) | `md serve` thin local read-only folder browser |
+| **19** (done) | Same-indent mixed bullet/delimiter → new list span |
 
 ## Replace boundary
 

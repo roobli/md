@@ -24,6 +24,8 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **15** | **Done** | CommonMark **setext level-2** (`text` + continuous `---`) vs thematic-break parity: while extending a paragraph, `isSetextUnderline` wins before `isBlockStart` / thematic; spaced `- - -` / `***` / `___` stay thematic; standalone `---` unchanged. Closes Noto intentional golden gap #1. |
 | **16** | **Done** | Mixed-marker nested lists stay one span when indented to the parent item content column (micromark parity; Noto intentional golden gap #2). |
 | **17** | **Done** | GFM **table header/delimiter column-count parity** vs micromark: `looksLikeTable` only when delimiter cell count equals header (leading/trailing pipes optional; empty edge cells ignored); mismatched counts stay paragraph; ragged body with matching header/delim still table. |
+| **18** | **Done** | `md serve <dir>` thin local read-only folder browser (localhost HTTP; `parseBlocks` → HTML preview; realpath root pin). |
+| **19** | **Done** | Same-indent sibling lists with a different bullet (`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new span (CommonMark / micromark); Phase 16 indented mixed nests unchanged. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -246,3 +248,25 @@ cross-family nests remains host-side.
 - [x] Tests in `native-scanner.test.ts`; package `0.1.14`
 
 Phase 17 **shipped** on `main` (v0.1.14).
+
+## Phase 18 acceptance
+
+- [x] `md serve <dir>` bin — thin localhost HTTP read-only folder browser
+- [x] Markdown preview via `parseBlocks` → HTML (no micromark as primary path)
+- [x] Root pinned; `realpath` rejects symlink escapes outside the served root
+- [x] Package `0.1.15` (chore harden) after initial serve land
+
+Phase 18 **shipped** on `main` (v0.1.15).
+
+## Phase 19 acceptance
+
+- [x] Sibling-indent bullet items with a different `-`/`+`/`*` marker open a
+      new `bullet-list` / `task-list` span (micromark parity)
+- [x] Sibling-indent ordered items with a different `.` / `)` delimiter open a
+      new `ordered-list` span
+- [x] Loose lists (blank between items) follow the same sibling-marker rule
+- [x] Phase 16 indented mixed-marker nests stay one span
+- [x] Tests in `native-scanner.test.ts`; package `0.1.16`
+
+Phase 19 **shipped** on `main` (v0.1.16).
+
