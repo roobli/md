@@ -178,6 +178,71 @@ describe('tryNativeSplit', () => {
     expect(interruptSplit.spans[0]!.markdown).toBe('para\n| a | b |\n| --- |');
   });
 
+  it('Phase 19: same-indent mixed bullet/delimiter opens a new list', () => {
+    // Different bullets at sibling indent → separate lists (micromark).
+    const dashPlus = '- a\n+ b\n';
+    const dp = tryNativeSplit(dashPlus)!;
+    expect(joinSplit(dp)).toBe(dashPlus);
+    expect(dp.spans.map((s) => s.kind)).toEqual(['bullet-list', 'bullet-list']);
+    expect(dp.spans[0]!.markdown).toBe('- a');
+    expect(dp.spans[1]!.markdown).toBe('+ b');
+    expect(dp.gaps).toEqual(['\n']);
+
+    const three = '- a\n+ b\n* c\n';
+    const th = tryNativeSplit(three)!;
+    expect(joinSplit(th)).toBe(three);
+    expect(th.spans.map((s) => s.kind)).toEqual([
+      'bullet-list',
+      'bullet-list',
+      'bullet-list',
+    ]);
+    expect(th.spans.map((s) => s.markdown)).toEqual(['- a', '+ b', '* c']);
+
+    // Ordered delimiter change (`.` vs `)`) at sibling indent → new list.
+    const delim = '1. a\n2) b\n';
+    const d = tryNativeSplit(delim)!;
+    expect(joinSplit(d)).toBe(delim);
+    expect(d.spans.map((s) => s.kind)).toEqual(['ordered-list', 'ordered-list']);
+    expect(d.spans[0]!.markdown).toBe('1. a');
+    expect(d.spans[1]!.markdown).toBe('2) b');
+
+    // Loose list with blank + different bullet still splits.
+    const loose = '- a\n\n+ b\n';
+    const lo = tryNativeSplit(loose)!;
+    expect(joinSplit(lo)).toBe(loose);
+    expect(lo.spans.map((s) => s.kind)).toEqual(['bullet-list', 'bullet-list']);
+    expect(lo.gaps).toEqual(['\n\n']);
+
+    // Task lists follow the same sibling-marker rule.
+    const tasks = '- [ ] a\n+ [x] b\n';
+    const tk = tryNativeSplit(tasks)!;
+    expect(joinSplit(tk)).toBe(tasks);
+    expect(tk.spans.map((s) => s.kind)).toEqual(['task-list', 'task-list']);
+
+    // Same bullet siblings stay one span; same ordered delimiter stays one.
+    expect(tryNativeSplit('- a\n- b\n')!.spans.map((s) => s.kind)).toEqual([
+      'bullet-list',
+    ]);
+    expect(tryNativeSplit('1. a\n2. b\n')!.spans.map((s) => s.kind)).toEqual([
+      'ordered-list',
+    ]);
+
+    // Phase 16 unchanged: indented mixed nest stays one span.
+    const nest = '- a\n  + b\n- c\n';
+    const n = tryNativeSplit(nest)!;
+    expect(joinSplit(n)).toBe(nest);
+    expect(n.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(n.spans[0]!.markdown).toBe('- a\n  + b\n- c');
+
+    // After a same-family nest, a sibling with a different bullet still splits.
+    const nestThenMix = '- a\n  - b\n+ c\n';
+    const nm = tryNativeSplit(nestThenMix)!;
+    expect(joinSplit(nm)).toBe(nestThenMix);
+    expect(nm.spans.map((s) => s.kind)).toEqual(['bullet-list', 'bullet-list']);
+    expect(nm.spans[0]!.markdown).toBe('- a\n  - b');
+    expect(nm.spans[1]!.markdown).toBe('+ c');
+  });
+
   it('natively splits GFM tables with exact offsets', () => {
     const text = '| a | b |\n| - | - |\n| 1 | 2 |\n';
     const split = tryNativeSplit(text);

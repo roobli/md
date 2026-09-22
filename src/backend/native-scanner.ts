@@ -22,6 +22,9 @@
  * Phase 17: GFM table header/delimiter column-count parity — looksLikeTable
  * only when delimiter cell count equals header (micromark/GFM); ragged body
  * rows still absorb once a table is open.
+ * Phase 19: same-indent sibling lists with a different bullet (`-`/`+`/`*`) or
+ * ordered delimiter (`.`/`)`) open a new span (CommonMark / micromark); nested
+ * mixed markers (Phase 16) unchanged.
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -629,6 +632,9 @@ export function tryNativeSplit(text: string): SplitDocument {
       // siblings update it. Phase 16.
       const openingMarker = (orderedMarker(line.content) ?? bulletMarker(line.content))!;
       let nestIndent = openingMarker[0].length;
+      // Phase 19: sibling items must keep the opening bullet / ordered delimiter.
+      const listBullet = ordered ? null : (openingMarker[2] as string);
+      const listDelimiter = ordered ? (openingMarker[3] as string) : null;
       let j = i + 1;
 
       /** Absorb a list-item line into this span, or signal break. */
@@ -647,6 +653,13 @@ export function tryNativeSplit(text: string): SplitDocument {
         // refresh nestIndent; nested same-family keep parent nestIndent so a
         // later mixed nest under the parent still matches micromark.
         if (!nested) {
+          // Phase 19: different bullet (`-`/`+`/`*`) or ordered delimiter
+          // (`.`/`)`) at sibling indent opens a new list (micromark parity).
+          if (ordered) {
+            if (marker[3] !== listDelimiter) return 'break';
+          } else if (marker[2] !== listBullet) {
+            return 'break';
+          }
           if (isTaskListItem(content)) hasTask = true;
           nestIndent = marker[0].length;
         }
