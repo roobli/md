@@ -61,5 +61,8 @@
     "micromark-extension-frontmatter": "^2.0.0",
     "micromark-extension-gfm": "^3.0.0",
     "micromark-extension-math": "^3.1.0"
+  },
+  "bin": {
+    "md": "./dist/serve/cli.js"
   }
 }
