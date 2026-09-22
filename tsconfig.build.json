@@ -5,9 +5,15 @@
     "declarationMap": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": [],
+    "types": [
+      "node"
+    ],
     "noEmit": false
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
 }

@@ -99,6 +99,22 @@ if (doc.status === "parsed") {
 }
 ```
 
+
+## Local folder browser (`md serve`)
+
+Thin **read-only** localhost HTTP UI for a directory. Markdown preview uses
+`parseBlocks` → IR → HTML (same dogfood path as Noto.docs). Not Noto Electron,
+not holt, not a collab surface.
+
+```
+pnpm build
+node dist/serve/cli.js serve ./folder
+# or, after link/install: md serve ./folder
+```
+
+Defaults to `127.0.0.1:4321`. Optional `--port` / explicit `--host 0.0.0.0`.
+Root is pinned by the CLI argument; the UI cannot change it.
+
 ## Breaking change (Phase 6)
 
 - Default entry **no longer** falls back to micromark. Documents outside the
