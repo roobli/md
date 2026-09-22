@@ -66,15 +66,18 @@ function guessMime(filePath: string): string {
 }
 
 export async function startServe(options: ServeOptions): Promise<ServeHandle> {
-  const rootAbs = path.resolve(options.root);
+  const rootResolved = path.resolve(options.root);
+  let rootAbs = rootResolved;
   try {
-    const st = await fs.stat(rootAbs);
+    const st = await fs.stat(rootResolved);
     if (!st.isDirectory()) {
-      throw new Error(`md serve: not a directory: ${rootAbs}`);
+      throw new Error(`md serve: not a directory: ${rootResolved}`);
     }
+    // Pin to realpath so later resolveUnderRoot comparisons match.
+    rootAbs = await fs.realpath(rootResolved);
   } catch (err) {
     if (err instanceof Error && err.message.startsWith('md serve:')) throw err;
-    throw new Error(`md serve: cannot open directory: ${rootAbs}`);
+    throw new Error(`md serve: cannot open directory: ${rootResolved}`);
   }
 
   const host = options.host ?? '127.0.0.1';
