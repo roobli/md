@@ -26,6 +26,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **17** | **Done** | GFM **table header/delimiter column-count parity** vs micromark: `looksLikeTable` only when delimiter cell count equals header (leading/trailing pipes optional; empty edge cells ignored); mismatched counts stay paragraph; ragged body with matching header/delim still table. |
 | **18** | **Done** | `md serve <dir>` thin local read-only folder browser (localhost HTTP; `parseBlocks` → HTML preview; realpath root pin). |
 | **19** | **Done** | Same-indent sibling lists with a different bullet (`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new span (CommonMark / micromark); Phase 16 indented mixed nests unchanged. |
+| **20** | **Done** | Marker-only empty list items (`-` / `1.` at EOL) are lists; empty item + blank + indented structural stays **outside** the list (micromark); mid-list empty siblings stay one span; tight empty+structural stays inside. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -269,4 +270,19 @@ Phase 18 **shipped** on `main` (v0.1.15).
 - [x] Tests in `native-scanner.test.ts`; package `0.1.16`
 
 Phase 19 **shipped** on `main` (v0.1.16).
+
+
+## Phase 20 acceptance
+
+- [x] Bare `-` / `*` / `+` / `1.` / `1)` at EOL are list items (CommonMark);
+      `-foo` stays a paragraph; `---` / `***` stay thematic
+- [x] Empty item + blank + indented structural (quote / ATX / fence / hr / table /
+      html / paragraph) opens outside the list span (micromark parity)
+- [x] Mid-list empty sibling stays in the same list; following marker after the
+      outside block starts a new list
+- [x] Non-empty + blank + indented structural still nests inside (Phase 14)
+- [x] Tight empty + structural (no blank) stays inside the list
+- [x] Tests in `native-scanner.test.ts`; package `0.1.17`
+
+Phase 20 **shipped** on `main` (v0.1.17).
 

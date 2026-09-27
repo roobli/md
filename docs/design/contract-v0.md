@@ -164,7 +164,7 @@ Leading/trailing pipes are optional; empty edge cells from outer pipes are
 ignored. Mismatched counts stay paragraph; ragged body rows with a matching
 header/delimiter still form a table.
 
-**Phase 19**: Same-indent sibling list items with a different bullet
+**Phase 20**: Marker-only empty list items (`-` / `1.` at EOL) are lists; after an empty item + blank, indented structural opens outside the list (micromark). Mid-list empty siblings stay one span; tight empty+structural stays inside. **Phase 19**: Same-indent sibling list items with a different bullet
 (`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new list span (CommonMark /
 micromark). Indented mixed-marker nests (Phase 16) stay one span.
 
