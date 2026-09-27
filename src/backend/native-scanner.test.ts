@@ -646,4 +646,62 @@ describe('tryNativeSplit', () => {
     ]);
     expect(split!.spans.every((s) => s.node === null)).toBe(true);
   });
+
+  it('Phase 20: marker-only empty item + blank puts structural outside', () => {
+    // Bare `-` / `1.` at EOL are list items (CommonMark); `-foo` is not.
+    expect(tryNativeSplit('-\n')!.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(tryNativeSplit('-\n')!.spans[0]!.markdown).toBe('-');
+    expect(tryNativeSplit('1.\n')!.spans.map((s) => s.kind)).toEqual(['ordered-list']);
+    expect(tryNativeSplit('-foo\n')!.spans[0]!.kind).toBe('paragraph');
+
+    // Empty + blank + structural → structural outside (micromark parity).
+    const quote = tryNativeSplit('-\n\n  > quote\n')!;
+    expect(quote.spans.map((s) => s.kind)).toEqual(['bullet-list', 'quote']);
+    expect(quote.spans[0]!.markdown).toBe('-');
+    expect(quote.spans[1]!.markdown).toBe('> quote');
+
+    const heading = tryNativeSplit('-\n\n  ## Inside\n')!;
+    expect(heading.spans.map((s) => s.kind)).toEqual(['bullet-list', 'heading']);
+
+    const fence = tryNativeSplit('-\n\n  ```\n  code\n  ```\n')!;
+    expect(fence.spans.map((s) => s.kind)).toEqual(['bullet-list', 'fenced-code']);
+
+    const hr = tryNativeSplit('-\n\n  ---\n')!;
+    expect(hr.spans.map((s) => s.kind)).toEqual(['bullet-list', 'thematic-break']);
+
+    const table = tryNativeSplit('-\n\n  | a |\n  | - |\n  | 1 |\n')!;
+    expect(table.spans.map((s) => s.kind)).toEqual(['bullet-list', 'table']);
+
+    // Mid-list: empty sibling stays in the same list; structural outside;
+    // following marker starts a new list (micromark).
+    const mid = tryNativeSplit('- first\n\n-\n\n  > quote\n\n- last\n')!;
+    expect(mid.spans.map((s) => s.kind)).toEqual(['bullet-list', 'quote', 'bullet-list']);
+    expect(mid.spans[0]!.markdown).toBe('- first\n\n-');
+    expect(mid.spans[1]!.markdown).toBe('> quote');
+    expect(mid.spans[2]!.markdown).toBe('- last');
+
+    const midOrdered = tryNativeSplit('1. a\n\n2.\n\n   > q\n\n3. c\n')!;
+    expect(midOrdered.spans.map((s) => s.kind)).toEqual(['ordered-list', 'quote', 'ordered-list']);
+    expect(midOrdered.spans[0]!.markdown).toBe('1. a\n\n2.');
+
+    // Non-empty + blank + structural still nests inside (Phase 14).
+    const nested = tryNativeSplit('- text\n\n  > quote\n')!;
+    expect(nested.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(nested.spans[0]!.markdown).toBe('- text\n\n  > quote');
+
+    // Tight empty + structural stays inside (no blank).
+    const tight = tryNativeSplit('-\n  > quote\n')!;
+    expect(tight.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(tight.spans[0]!.markdown).toBe('-\n  > quote');
+
+    // Empty then sibling item stays one loose list.
+    const siblings = tryNativeSplit('-\n\n- next\n')!;
+    expect(siblings.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(siblings.spans[0]!.markdown).toBe('-\n\n- next');
+
+    // Thematic `---` / `***` still not list items.
+    expect(tryNativeSplit('---\n')!.spans[0]!.kind).toBe('thematic-break');
+    expect(tryNativeSplit('***\n')!.spans[0]!.kind).toBe('thematic-break');
+  });
+
 });

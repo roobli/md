@@ -15,7 +15,8 @@
  * frontmatter keep their bytes). Phase 13: CommonMark lazy continuation keeps
  * unprefixed paragraph lines inside quotes and list items (micromark parity).
  * Phase 14: definition lazy continuations; GFM tables interrupt paragraphs;
- * lists keep indented nested blocks after a blank (micromark nest/interrupt parity).
+ * lists keep indented nested blocks after a blank (micromark nest/interrupt parity),
+ * except marker-only empty item + blank (Phase 20 — following block is outside).
  * Phase 15: setext `---` vs thematic-break while extending paragraphs.
  * Phase 16: mixed-marker nested lists stay one span when indented to the
  * parent item content column (micromark parity; Noto intentional golden gap #2).
@@ -142,11 +143,42 @@ function isThematicBreak(content: string): boolean {
 }
 
 function bulletMarker(content: string): RegExpMatchArray | null {
-  return /^( {0,3})([-*+])(\s+)/.exec(content);
+  // CommonMark: marker + 1–4 spaces/tabs, or marker at EOL (empty item).
+  // Do not treat `-foo` as a list item (no whitespace between marker and text).
+  return /^( {0,3})([-*+])([ \t]+|$)/.exec(content);
 }
 
 function orderedMarker(content: string): RegExpMatchArray | null {
-  return /^( {0,3})(\d{1,9})([.)])(\s+)/.exec(content);
+  return /^( {0,3})(\d{1,9})([.)])([ \t]+|$)/.exec(content);
+}
+
+/**
+ * Content column after a list marker (CommonMark). Empty EOL items still count
+ * as marker-width + 1 (imaginary trailing space) so nested indent matches
+ * micromark.
+ */
+function markerNestIndent(marker: RegExpMatchArray): number {
+  const raw = marker[0]!.length;
+  const last = marker[0]!.slice(-1);
+  // Match ended on the marker char → empty item (`-` / `1.` at EOL).
+  if (last === '-' || last === '+' || last === '*' || last === '.' || last === ')') {
+    return raw + 1;
+  }
+  return raw;
+}
+
+/** Marker-only list item (no task checkbox / text after the marker). */
+function isMarkerOnlyListItem(content: string): boolean {
+  const ordered = orderedMarker(content);
+  if (ordered) {
+    // ordered groups: [1] indent [2] digits [3] delim [4] ws-or-empty
+    const afterMarker = content.slice((ordered[1]?.length ?? 0) + (ordered[2]?.length ?? 0) + 1);
+    return afterMarker.trim() === '';
+  }
+  const bullet = bulletMarker(content);
+  if (!bullet) return false;
+  const afterMarker = content.slice((bullet[1]?.length ?? 0) + 1);
+  return afterMarker.trim() === '';
 }
 
 function isTaskListItem(content: string): boolean {
@@ -631,7 +663,8 @@ export function tryNativeSplit(text: string): SplitDocument {
       // nests must reach this indent (CommonMark / micromark); same-family
       // siblings update it. Phase 16.
       const openingMarker = (orderedMarker(line.content) ?? bulletMarker(line.content))!;
-      let nestIndent = openingMarker[0].length;
+      let nestIndent = markerNestIndent(openingMarker);
+      let lastItemEmpty = isMarkerOnlyListItem(line.content);
       // Phase 19: sibling items must keep the opening bullet / ordered delimiter.
       const listBullet = ordered ? null : (openingMarker[2] as string);
       const listDelimiter = ordered ? (openingMarker[3] as string) : null;
@@ -647,6 +680,7 @@ export function tryNativeSplit(text: string): SplitDocument {
         if (nextOrdered !== ordered) {
           // Phase 16: indented mixed-marker nest stays in this span.
           if (!nested) return 'break';
+          lastItemEmpty = false;
           return 'keep';
         }
         // Same-family: siblings (indent < nestIndent) may flip task-list and
@@ -661,7 +695,12 @@ export function tryNativeSplit(text: string): SplitDocument {
             return 'break';
           }
           if (isTaskListItem(content)) hasTask = true;
-          nestIndent = marker[0].length;
+          nestIndent = markerNestIndent(marker);
+          lastItemEmpty = isMarkerOnlyListItem(content);
+        } else {
+          // Nested item — keep absorbing blank+indent into the parent span
+          // (micromark); top-level empty+blank gate uses sibling emptiness only.
+          lastItemEmpty = false;
         }
         return 'keep';
       };
@@ -682,23 +721,27 @@ export function tryNativeSplit(text: string): SplitDocument {
             j = k;
             continue;
           }
-          // Phase 14: after a blank, indented nested blocks (table rows,
-          // indented-code, nested paragraphs) stay inside the list span
-          // (CommonMark list-item nested content; micromark parity).
+          // Phase 14: after a blank, indented nested blocks stay inside the
+          // list when the current item has content. Phase 20: marker-only
+          // empty item + blank + indented block → block is outside (micromark).
           if (indentOf(lines[k]!.content) >= 2) {
+            if (lastItemEmpty) break;
             j = k;
+            lastItemEmpty = false;
             continue;
           }
           break;
         }
         if (indentOf(next.content) >= 2) {
           j += 1;
+          lastItemEmpty = false;
           continue;
         }
         // CommonMark lazy continuation of a list-item paragraph (Phase 13):
         // unindented lines that are not block starts stay in the list.
         if (!isBlockStart(next.content)) {
           j += 1;
+          lastItemEmpty = false;
           continue;
         }
         break;
