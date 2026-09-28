@@ -227,6 +227,96 @@ describe('tryNativeSplit', () => {
     expect(multiSplit.spans.map((s) => s.kind)).toEqual(['table']);
   });
 
+  it('Phase 22: lazy only with open paragraph / complete link-def / ordered start≠1', () => {
+    // Empty quote does not absorb unindented lazy (micromark).
+    const emptyQ = '>\npara\n';
+    const emptyQSplit = tryNativeSplit(emptyQ)!;
+    expect(joinSplit(emptyQSplit)).toBe(emptyQ);
+    expect(emptyQSplit.spans.map((s) => s.kind)).toEqual(['quote', 'paragraph']);
+    expect(emptyQSplit.spans[0]!.markdown).toBe('>');
+    expect(emptyQSplit.spans[1]!.markdown).toBe('para');
+
+    // Marker-blank after content clears open paragraph — lazy stays outside.
+    const blankThen = '> a\n>\npara\n';
+    const blankThenSplit = tryNativeSplit(blankThen)!;
+    expect(joinSplit(blankThenSplit)).toBe(blankThen);
+    expect(blankThenSplit.spans.map((s) => s.kind)).toEqual(['quote', 'paragraph']);
+    expect(blankThenSplit.spans[0]!.markdown).toBe('> a\n>');
+    expect(blankThenSplit.spans[1]!.markdown).toBe('para');
+
+    // Non-empty quote still lazy-continues (Phase 13).
+    const quoteLazy = '> a\npara\n';
+    expect(tryNativeSplit(quoteLazy)!.spans.map((s) => s.kind)).toEqual(['quote']);
+    expect(tryNativeSplit(quoteLazy)!.spans[0]!.markdown).toBe('> a\npara');
+
+    // Marker-only empty list item: unindented para is outside.
+    for (const empty of ['-\npara\n', '*\npara\n', '+\npara\n', '1.\npara\n', '1)\npara\n', '- \npara\n']) {
+      const split = tryNativeSplit(empty)!;
+      expect(joinSplit(split)).toBe(empty);
+      expect(split.spans.map((s) => s.kind)).toEqual([
+        empty.startsWith('1') ? 'ordered-list' : 'bullet-list',
+        'paragraph',
+      ]);
+    }
+
+    // Indented content after empty item still nests; then lazy works.
+    const indentThenLazy = '-\n  para\nlazy\n';
+    const itl = tryNativeSplit(indentThenLazy)!;
+    expect(joinSplit(itl)).toBe(indentThenLazy);
+    expect(itl.spans.map((s) => s.kind)).toEqual(['bullet-list']);
+    expect(itl.spans[0]!.markdown).toBe('-\n  para\nlazy');
+
+    // Complete link-def: unindented / non-title indented stay outside.
+    const defPara = '[a]: /url\npara\n';
+    const defParaSplit = tryNativeSplit(defPara)!;
+    expect(joinSplit(defParaSplit)).toBe(defPara);
+    expect(defParaSplit.spans.map((s) => s.kind)).toEqual(['link-definition', 'paragraph']);
+    expect(defParaSplit.spans[0]!.markdown).toBe('[a]: /url');
+
+    const defNonTitle = '[a]: /url\n   not-title\n';
+    const defNonTitleSplit = tryNativeSplit(defNonTitle)!;
+    expect(joinSplit(defNonTitleSplit)).toBe(defNonTitle);
+    expect(defNonTitleSplit.spans.map((s) => s.kind)).toEqual(['link-definition', 'paragraph']);
+    expect(defNonTitleSplit.spans[0]!.markdown).toBe('[a]: /url');
+    expect(defNonTitleSplit.spans[1]!.markdown).toBe('not-title');
+
+    // Indented title still absorbed; same-line title blocks further continuation.
+    const titled = '[a]: /url\n  "title"\n';
+    expect(tryNativeSplit(titled)!.spans.map((s) => s.kind)).toEqual(['link-definition']);
+    expect(tryNativeSplit(titled)!.spans[0]!.markdown).toBe('[a]: /url\n  "title"');
+    const sameTitle = '[a]: /url "t"\npara\n';
+    expect(tryNativeSplit(sameTitle)!.spans.map((s) => s.kind)).toEqual([
+      'link-definition',
+      'paragraph',
+    ]);
+
+    // Footnote lazy unchanged (Phase 14).
+    const fn = '[^1]: first\nlazy line\n';
+    expect(tryNativeSplit(fn)!.spans.map((s) => s.kind)).toEqual(['footnote-definition']);
+    expect(tryNativeSplit(fn)!.spans[0]!.markdown).toBe('[^1]: first\nlazy line');
+
+    // Ordered list start ≠ 1 does not interrupt a paragraph.
+    const noInterrupt = 'para\n2. still para\n';
+    const noInterruptSplit = tryNativeSplit(noInterrupt)!;
+    expect(joinSplit(noInterruptSplit)).toBe(noInterrupt);
+    expect(noInterruptSplit.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(noInterruptSplit.spans[0]!.markdown).toBe('para\n2. still para');
+
+    // Start 1 still interrupts.
+    const yesInterrupt = 'para\n1. item\n';
+    const yesInterruptSplit = tryNativeSplit(yesInterrupt)!;
+    expect(joinSplit(yesInterruptSplit)).toBe(yesInterrupt);
+    expect(yesInterruptSplit.spans.map((s) => s.kind)).toEqual(['paragraph', 'ordered-list']);
+
+    // Empty ordered + para + start≠2 stays one paragraph after the list.
+    const emptyThen = '1.\npara\n2. b\n';
+    const emptyThenSplit = tryNativeSplit(emptyThen)!;
+    expect(joinSplit(emptyThenSplit)).toBe(emptyThen);
+    expect(emptyThenSplit.spans.map((s) => s.kind)).toEqual(['ordered-list', 'paragraph']);
+    expect(emptyThenSplit.spans[0]!.markdown).toBe('1.');
+    expect(emptyThenSplit.spans[1]!.markdown).toBe('para\n2. b');
+  });
+
   it('Phase 19: same-indent mixed bullet/delimiter opens a new list', () => {
     // Different bullets at sibling indent → separate lists (micromark).
     const dashPlus = '- a\n+ b\n';

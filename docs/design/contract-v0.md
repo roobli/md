@@ -164,7 +164,11 @@ Leading/trailing pipes are optional; empty edge cells from outer pipes are
 ignored. Mismatched counts stay paragraph; ragged body rows with a matching
 header/delimiter still form a table.
 
-**Phase 21**: Pipe-less delimiter lines that are also list items (`- | -`, `1. | ---`, …) are not GFM tables (micromark list-steal); leading-`|` / compact `-|-` stay tables. **Phase 20**: Marker-only empty list items (`-` / `1.` at EOL) are lists; after an empty item + blank, indented structural opens outside the list (micromark). Mid-list empty siblings stay one span; tight empty+structural stays inside. **Phase 19**: Same-indent sibling list items with a different bullet
+**Phase 22**: Lazy continuation only with an open paragraph — empty quotes /
+marker-only empty list items do not absorb unindented lazy lines; complete
+link-definitions absorb at most one indented title line (not arbitrary lazy /
+non-title indent); ordered lists with start ≠ 1 do not interrupt paragraphs
+(CommonMark / micromark). Footnote lazy (Phase 14) unchanged. **Phase 21**: Pipe-less delimiter lines that are also list items (`- | -`, `1. | ---`, …) are not GFM tables (micromark list-steal); leading-`|` / compact `-|-` stay tables. **Phase 20**: Marker-only empty list items (`-` / `1.` at EOL) are lists; after an empty item + blank, indented structural opens outside the list (micromark). Mid-list empty siblings stay one span; tight empty+structural stays inside. **Phase 19**: Same-indent sibling list items with a different bullet
 (`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new list span (CommonMark /
 micromark). Indented mixed-marker nests (Phase 16) stay one span.
 
@@ -217,6 +221,9 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **17** (done) | GFM table header/delimiter column-count parity |
 | **18** (done) | `md serve` thin local read-only folder browser |
 | **19** (done) | Same-indent mixed bullet/delimiter → new list span |
+| **20** (done) | Empty list item + blank → structural outside |
+| **21** (done) | List-steal pipe-less delimiters not tables |
+| **22** (done) | Lazy only with open paragraph / link-def title / ordered start≠1 |
 
 ## Replace boundary
 
