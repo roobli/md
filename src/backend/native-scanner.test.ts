@@ -178,6 +178,55 @@ describe('tryNativeSplit', () => {
     expect(interruptSplit.spans[0]!.markdown).toBe('para\n| a | b |\n| --- |');
   });
 
+  it('Phase 21: micromark list-steal pipe-less delimiters are not tables', () => {
+    // `- | -` (marker + space) → paragraph + bullet list (micromark list-steal).
+    const steal = 'a | b\n- | -\n1 | 2\n';
+    const stealSplit = tryNativeSplit(steal)!;
+    expect(joinSplit(stealSplit)).toBe(steal);
+    expect(stealSplit.spans.map((s) => s.kind)).toEqual(['paragraph', 'bullet-list']);
+    expect(stealSplit.spans[0]!.markdown).toBe('a | b');
+    expect(stealSplit.spans[1]!.markdown).toBe('- | -\n1 | 2');
+
+    // Single-dash cells with longer dashes still list-steal.
+    const stealLong = 'a | b\n- | ---\n1 | 2\n';
+    const stealLongSplit = tryNativeSplit(stealLong)!;
+    expect(joinSplit(stealLongSplit)).toBe(stealLong);
+    expect(stealLongSplit.spans.map((s) => s.kind)).toEqual(['paragraph', 'bullet-list']);
+
+    // Indented (0–3 spaces) pipe-less list-steal.
+    const indented = 'a | b\n  - | -\n  1 | 2\n';
+    const indentedSplit = tryNativeSplit(indented)!;
+    expect(joinSplit(indentedSplit)).toBe(indented);
+    expect(indentedSplit.spans.map((s) => s.kind)).toEqual(['paragraph', 'bullet-list']);
+
+    // Ordered list-steal (`1. | -`) — delimiter cells alone would look tabular,
+    // but marker+space wins (engine already skipped via non-delim first cell;
+    // keep the bullet path covered explicitly).
+    const ordered = 'a | b\n1. | ---\nx | y\n';
+    const orderedSplit = tryNativeSplit(ordered)!;
+    expect(joinSplit(orderedSplit)).toBe(ordered);
+    expect(orderedSplit.spans.map((s) => s.kind)).toEqual(['paragraph', 'ordered-list']);
+
+    // Compact `-|-` (no marker+space) stays a table.
+    const compact = 'a|b\n-|-\n1|2\n';
+    const compactSplit = tryNativeSplit(compact)!;
+    expect(joinSplit(compactSplit)).toBe(compact);
+    expect(compactSplit.spans.map((s) => s.kind)).toEqual(['table']);
+    expect(compactSplit.spans[0]!.markdown).toBe('a|b\n-|-\n1|2');
+
+    // Leading-`|` delimiter stays a table.
+    const leading = '| a | b |\n| - | - |\n| 1 | 2 |\n';
+    const leadingSplit = tryNativeSplit(leading)!;
+    expect(joinSplit(leadingSplit)).toBe(leading);
+    expect(leadingSplit.spans.map((s) => s.kind)).toEqual(['table']);
+
+    // Multi-dash pipe-optional (not a list marker) stays a table.
+    const multi = 'a | b\n--- | ---\n1 | 2\n';
+    const multiSplit = tryNativeSplit(multi)!;
+    expect(joinSplit(multiSplit)).toBe(multi);
+    expect(multiSplit.spans.map((s) => s.kind)).toEqual(['table']);
+  });
+
   it('Phase 19: same-indent mixed bullet/delimiter opens a new list', () => {
     // Different bullets at sibling indent → separate lists (micromark).
     const dashPlus = '- a\n+ b\n';
