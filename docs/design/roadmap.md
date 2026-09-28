@@ -28,6 +28,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **19** | **Done** | Same-indent sibling lists with a different bullet (`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new span (CommonMark / micromark); Phase 16 indented mixed nests unchanged. |
 | **20** | **Done** | Marker-only empty list items (`-` / `1.` at EOL) are lists; empty item + blank + indented structural stays **outside** the list (micromark); mid-list empty siblings stay one span; tight empty+structural stays inside. |
 | **21** | **Done** | Micromark **list-steal** pipe-less delimiters: `- | -` / indented / `1. | ---` are not tables (`countDelimiterCells` refuses `isListItem`); leading-`|` and compact `-|-` stay tables. |
+| **22** | **Done** | Lazy continuation only with an **open paragraph**: empty quotes / marker-only empty list items do not absorb unindented lazy lines; complete **link-definitions** absorb at most one indented title line; ordered lists with **start ≠ 1** do not interrupt paragraphs (CommonMark / micromark). Footnote lazy (Phase 14) unchanged. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -296,4 +297,19 @@ Phase 20 **shipped** on `main` (v0.1.17).
 - [x] Tests in `native-scanner.test.ts`; package `0.1.18`
 
 Phase 21 **shipped** on `main` (v0.1.18).
+
+## Phase 22 acceptance
+
+- [x] Empty quote (`>` / `> `) and quote after a marker-blank line do not absorb
+      unindented lazy paragraph lines (micromark); non-empty quote lazy (Phase 13)
+      unchanged
+- [x] Marker-only empty list items (`-` / `*` / `+` / `1.` / `1)` / `- `) do not
+      absorb unindented lazy text; indented content still nests, then lazy works
+- [x] Complete link-definitions absorb at most one indented title line; unindented
+      / non-title indented lines stay outside; footnote lazy (Phase 14) unchanged
+- [x] Ordered list with start ≠ 1 does not interrupt a paragraph; start `1` still
+      interrupts
+- [x] Tests in `native-scanner.test.ts`; package `0.1.19`
+
+Phase 22 **shipped** on `main` (v0.1.19).
 

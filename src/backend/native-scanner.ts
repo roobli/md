@@ -29,6 +29,11 @@
  * Phase 21: micromark list-steal — pipe-less delimiter lines that are also list
  * items (`- | -`, `* | ---`, `1. | -`, …) are not tables; leading-`|` / compact
  * `-|-` rows stay tables.
+ * Phase 22: lazy continuation only with an open paragraph — empty quotes /
+ * marker-only empty list items do not absorb unindented lazy lines; complete
+ * link-definitions absorb at most one indented title line (not arbitrary lazy
+ * text); ordered lists with start ≠ 1 do not interrupt paragraphs (CommonMark /
+ * micromark). Footnote lazy (Phase 14) unchanged.
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -204,6 +209,46 @@ function isListItem(content: string): boolean {
 
 function isBlockQuote(content: string): boolean {
   return /^\s{0,3}>/.test(content);
+}
+
+/**
+ * True when a blockquote line has no non-whitespace content after the `>`
+ * marker (and its optional following space). Used so lazy continuation only
+ * runs while a paragraph is open inside the quote (Phase 22).
+ */
+function isBlankBlockQuoteContent(content: string): boolean {
+  if (!isBlockQuote(content)) return false;
+  const stripped = content.replace(/^ {0,3}>[ \t]?/, '');
+  return /^\s*$/.test(stripped);
+}
+
+/**
+ * CommonMark link-reference title occupying the whole line after indent:
+ * `"..."`, `'...'`, or `(...)` (with backslash escapes).
+ */
+function isLinkTitleLine(content: string): boolean {
+  const body = content.replace(/^[ \t]+/, '');
+  return /^(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\))\s*$/.test(body);
+}
+
+/** Open-line link definition already includes a same-line title. */
+function linkDefOpenHasTitle(content: string): boolean {
+  // [label]: destination title — destination is <...> or a non-space token.
+  return (
+    /^( {0,3})\[[^\]\n]+\]:\s*(?:<[^>\n]*>|\S+)\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\))\s*$/.test(
+      content,
+    )
+  );
+}
+
+/**
+ * CommonMark: an ordered list interrupts a paragraph only when the start
+ * number is 1. Start ≠ 1 stays part of the paragraph (Phase 22).
+ */
+function orderedListInterruptsParagraph(content: string): boolean {
+  const ordered = orderedMarker(content);
+  if (!ordered) return false;
+  return Number(ordered[2]) === 1;
 }
 
 /**
@@ -562,20 +607,31 @@ export function tryNativeSplit(text: string): SplitDocument {
     if (def) {
       const start = spanStartAfterPrefix(line);
       let j = i + 1;
-      // Continuations: indented non-blank lines (title / footnote body), then
-      // lazy unindented non-block-starts (Phase 14; micromark footnote parity).
-      while (j < lines.length) {
-        const next = lines[j]!;
-        if (isBlank(next.content)) break;
-        if (indentOf(next.content) >= 1) {
-          j += 1;
-          continue;
+      if (def.kind === 'link-definition') {
+        // Phase 22: a complete link-def absorbs at most one indented title line.
+        // No unindented lazy text; indented non-title lines stay outside
+        // (micromark / CommonMark). Same-line title ⇒ no continuation.
+        if (!linkDefOpenHasTitle(line.content) && j < lines.length) {
+          const next = lines[j]!;
+          if (!isBlank(next.content) && isLinkTitleLine(next.content)) {
+            j += 1;
+          }
         }
-        if (!isBlockStart(next.content)) {
-          j += 1;
-          continue;
+      } else {
+        // Footnote: indented body + lazy unindented non-block-starts (Phase 14).
+        while (j < lines.length) {
+          const next = lines[j]!;
+          if (isBlank(next.content)) break;
+          if (indentOf(next.content) >= 1) {
+            j += 1;
+            continue;
+          }
+          if (!isBlockStart(next.content)) {
+            j += 1;
+            continue;
+          }
+          break;
         }
-        break;
       }
       const end = lines[j - 1]!.next;
       raw.push({ kind: def.kind, start, end });
@@ -618,20 +674,27 @@ export function tryNativeSplit(text: string): SplitDocument {
     // is two quotes (ex. 231). Marker-only blank lines (`>` / `> `) stay
     // inside one quote. Do not merge across unprefixed blanks (Noto #37 /
     // tight adjacent quotes+callouts).
-    // Lazy continuation (Phase 13): a following non-blank line that is not a
-    // block start may omit `>` and still belongs to the quote (ex. 240;
-    // setext `===` stays inside; `---` / lists / ATX / fences end the quote).
+    // Lazy continuation (Phase 13 / 22): a following non-blank line that is not
+    // a block start may omit `>` and still belongs to the quote when a paragraph
+    // is open (ex. 240; setext `===` stays inside; `---` / lists / ATX / fences
+    // end the quote). Empty / marker-blank quotes do not lazy-absorb (Phase 22).
     if (isBlockQuote(line.content)) {
       const start = spanStartAfterPrefix(line);
+      // Phase 22: lazy unindented lines only while a paragraph is open inside
+      // the quote. Marker-only `>` / `> ` clears the open-paragraph flag
+      // (micromark: `>\npara` and `> a\n>\npara` put para outside).
+      let paragraphOpen = !isBlankBlockQuoteContent(line.content);
       let j = i + 1;
       while (j < lines.length) {
         const next = lines[j]!;
         if (isBlockQuote(next.content)) {
+          paragraphOpen = !isBlankBlockQuoteContent(next.content);
           j += 1;
           continue;
         }
         if (isBlank(next.content)) break;
         if (isBlockStart(next.content)) break;
+        if (!paragraphOpen) break;
         j += 1;
       }
       const end = lines[j - 1]!.next;
@@ -745,8 +808,11 @@ export function tryNativeSplit(text: string): SplitDocument {
           continue;
         }
         // CommonMark lazy continuation of a list-item paragraph (Phase 13):
-        // unindented lines that are not block starts stay in the list.
+        // unindented lines that are not block starts stay in the list — but
+        // only when the current item has opened a paragraph. Marker-only empty
+        // items (`-` / `1.` / `- `) do not absorb unindented lazy text (Phase 22).
         if (!isBlockStart(next.content)) {
+          if (lastItemEmpty) break;
           j += 1;
           lastItemEmpty = false;
           continue;
@@ -805,7 +871,16 @@ export function tryNativeSplit(text: string): SplitDocument {
           j = -1;
           break;
         }
-        if (isBlockStart(next.content)) break;
+        if (isBlockStart(next.content)) {
+          // Phase 22: ordered list with start ≠ 1 does not interrupt a paragraph
+          // (CommonMark / micromark); absorb into the paragraph instead.
+          const ordered = orderedMarker(next.content);
+          if (ordered && !orderedListInterruptsParagraph(next.content)) {
+            j += 1;
+            continue;
+          }
+          break;
+        }
         // Phase 14: GFM tables interrupt paragraphs (two-line look-ahead only;
         // do not treat every pipe line as isBlockStart).
         if (looksLikeTable(lines, j)) break;
