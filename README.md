@@ -16,7 +16,7 @@ can depend on it without inheriting that copyleft.
 
 ## Status
 
-**Phase 20 shipped** — marker-only empty list items + blank put following structural outside (micromark). **Phase 19 shipped** — same-indent sibling lists with a different bullet
+**Phase 21 shipped** — micromark list-steal pipe-less delimiters (`- | -`) are not tables. **Phase 20 shipped** — marker-only empty list items + blank put following structural outside (micromark). **Phase 19 shipped** — same-indent sibling lists with a different bullet
 (`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new span (CommonMark /
 micromark parity); Phase 16 indented mixed nests unchanged. **Phase 18** —
 `md serve <dir>` thin local read-only folder browser (localhost HTTP shell:
@@ -53,14 +53,14 @@ thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
 Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
 ~14.5 ms vs micromark ~304 ms / ~1.5 s (see
 [`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.17** — Phase 20 empty list item + blank + structural outside. **v0.1.16** — Phase 19 same-indent list marker/delimiter split. **v0.1.15** — Phase 18 `md serve` + symlink-escape harden. **v0.1.14** — GFM table header/delimiter column-count parity. **v0.1.13** — mixed-marker nested lists. **v0.1.12** — setext-`---` vs hr. **v0.1.11** — adjacent defs as block starts.
+**v0.1.18** — Phase 21 list-steal pipe-less `- | -` delimiters. **v0.1.17** — Phase 20 empty list item + blank + structural outside. **v0.1.16** — Phase 19 same-indent list marker/delimiter split. **v0.1.15** — Phase 18 `md serve` + symlink-escape harden. **v0.1.14** — GFM table header/delimiter column-count parity. **v0.1.13** — mixed-marker nested lists. **v0.1.12** — setext-`---` vs hr. **v0.1.11** — adjacent defs as block starts.
 **v0.1.10** — nest / interrupt parity. **v0.1.9** — lazy continuation.
 **v0.1.8** — CJK / Typora-shaped strong lock-in. **v0.1.7** —
 `sourceEditBetween` / `reparseFromText`. **v0.1.6** line-prefix offset
 alignment. **v0.1.5** table delimiter widening. **v0.1.4** verbatim runs + bare
 autolink. **v0.1.3** hard-break + list-marker; **v0.1.2** native indented-code;
 **v0.1.1** quote/callout split.
-Noto may pin `github:roobli/md#v0.1.17` when ready.
+Noto may pin `github:roobli/md#v0.1.18` when ready.
 
 See:
 

@@ -26,6 +26,9 @@
  * Phase 19: same-indent sibling lists with a different bullet (`-`/`+`/`*`) or
  * ordered delimiter (`.`/`)`) open a new span (CommonMark / micromark); nested
  * mixed markers (Phase 16) unchanged.
+ * Phase 21: micromark list-steal — pipe-less delimiter lines that are also list
+ * items (`- | -`, `* | ---`, `1. | -`, …) are not tables; leading-`|` / compact
+ * `-|-` rows stay tables.
  */
 
 import type { BlockKind } from '../kinds.js';
@@ -271,6 +274,10 @@ function countHeaderCells(content: string): number | null {
 }
 
 function countDelimiterCells(content: string): number | null {
+  // Micromark list-steal: a pipe-less delimiter that is also a list item
+  // (`- | -`, indented ` - | -`, `1. | ---`, …) opens as a list, not a table.
+  // Leading-`|` rows (`| - | - |`) and compact `-|-` (no marker+space) stay tables.
+  if (isListItem(content)) return null;
   const cells = tableRowCells(content);
   if (!cells) return null;
   // Micromark requires a `|` or `:` somewhere (pure `---` is thematic/setext).
