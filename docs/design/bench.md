@@ -5,7 +5,7 @@ Synthetic A/B harness: `pnpm bench:ab` → `scripts/bench-ab.mjs` (micromark via
 Corpus shape matches Noto’s `PROFILE_OPEN` / `scripts/bench/corpus.mjs` orders of
 magnitude (medium ≈ 512 KiB, large ≈ 2 MiB): headings, prose, lists, task lists,
 tables, fenced code, display math, HTML blocks, plus frontmatter and a couple of
-link/footnote definitions. **No RooB / private vault content** — generator is
+link/footnote definitions. **No private vault content** — generator is
 deterministic public lorem.
 
 ## Results (Linux box, 2026-09-11)

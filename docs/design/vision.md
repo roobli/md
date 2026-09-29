@@ -30,7 +30,7 @@ public MIT package Noto (and later other hosts) can depend on.
    `@roobli/md/legacy-micromark`. The public contract must not force callers to
    import micromark types.
 4. **No vault leakage.** Synthetic and public fixtures only in this repo.
-   Never dump RooB private note content here.
+   Never add private note content here.
 
 ## Non-goals (for now)
 
