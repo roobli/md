@@ -2,7 +2,7 @@
 
 Honest notes from (1) an official Linux `.deb` install on this box, (2) macOS
 Typora **1.14.9** inspected on the author’s Mac (`/Applications/Typora.app`),
-(3) Noto’s existing measurements under `/workspace/Noto/docs/`, and (4) public
+(3) Noto’s existing measurements under its `docs/` folder, and (4) public
 docs that ship inside the packages. **No proprietary source dump** — only
 visible assets (themes, CSS class names, public Docs strings, process
 architecture, measured behaviour). Do **not** copy Typora JS into this repo.

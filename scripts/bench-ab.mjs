@@ -169,7 +169,7 @@ async function main() {
     '',
     `Measured: ${new Date().toISOString()}`,
     'Corpus: synthetic (Noto PROFILE_OPEN medium≈512KiB / large≈2MiB orders of magnitude).',
-    'No RooB / private vault content.',
+    'No private vault content.',
     '',
   ];
 
