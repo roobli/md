@@ -1,85 +1,55 @@
 # @roobli/md
 
-WYSIWYG-first markdown engine for [Noto](https://github.com/roobli/Noto).
+A Markdown engine for editors that must not rewrite the file.
 
-The goal is a parser built around **real editing habits**, not around dumping a
-full AST once and hoping the editor can live with it: block-oriented spans with
-byte offsets, gaps preserved for untouched regions, dialect coverage Noto
-already needs (CommonMark + GFM tables/strikethrough/task lists + math + YAML
-frontmatter + CJK-friendly emphasis), and open times that beat the micromark
-baseline Noto measures today (~570 ms medium / ~2.3 s large on the Linux
-corpus).
+`@roobli/md` splits a document into top-level blocks with exact byte offsets
+and keeps the gaps between them. A host can then re-parse only the part that
+changed, and save by slicing every untouched block straight from the original
+source instead of re-serializing it. It is the engine under
+[Noto](https://github.com/roobli/Noto), and it has no dependency on any editor
+or UI.
 
-Noto itself is AGPL-3.0. This package is **MIT**, same as
-[`@roobli/canvas`](https://github.com/roobli/canvas), so hosts that are not Noto
-can depend on it without inheriting that copyleft.
+MIT licensed, so a host that is not Noto can use it without taking on Noto's
+AGPL.
+
+## What it guarantees
+
+- **Byte-exact identity.** Parse a document, serialize it with every block
+  untouched, and you get the same bytes back: line endings, BOM, trailing
+  whitespace and odd gaps included. Noto's docs site checks this on every page
+  it publishes.
+- **Stable spans.** Every block carries its `start` and `end` in the source,
+  its kind, and the literal gap before it.
+- **Local reparse.** `reparseBlocks` and `reparseFromText` rebuild only the
+  window around an edit; blocks outside it keep their identity.
+- **One dialect.** CommonMark plus GFM tables, task lists and strikethrough,
+  `$`/`$$` math, YAML frontmatter, footnotes, callouts, wiki links and
+  CJK-friendly emphasis. Behaviour is checked against micromark for parity.
 
 ## Status
 
-**Phase 22 shipped** — lazy continuation only with an open paragraph: empty
-quotes / marker-only empty list items do not absorb unindented lazy lines;
-complete link-definitions absorb at most one indented title line; ordered lists
-with start ≠ 1 do not interrupt paragraphs (CommonMark / micromark). Footnote
-lazy (Phase 14) unchanged. **Phase 21 shipped** — micromark list-steal pipe-less delimiters (`- | -`) are not tables. **Phase 20 shipped** — marker-only empty list items + blank put following structural outside (micromark). **Phase 19 shipped** — same-indent sibling lists with a different bullet
-(`-`/`+`/`*`) or ordered delimiter (`.`/`)`) open a new span (CommonMark /
-micromark parity); Phase 16 indented mixed nests unchanged. **Phase 18** —
-`md serve <dir>` thin local read-only folder browser (localhost HTTP shell:
-tree + markdown/text/image preview via `parseBlocks` → HTML; root pinned;
-path resolved with `realpath` so symlink escapes outside the served root are
-rejected). **Phase 17** — GFM table header/delimiter column-count parity vs
-micromark (`looksLikeTable` only when counts match; mismatched → paragraph;
-ragged body with matching header/delim still table).
-**Phase 16** — mixed-marker nested lists stay one span when indented to the
-parent item content column (Noto intentional golden gap #2). **Phase 15** —
-CommonMark setext level-2 (`text` + continuous `---`) vs thematic-break parity
-(Noto intentional golden gap #1). **Phase 14** — nest /
-interrupt parity vs micromark: definition lazy continuations, GFM tables
-interrupt paragraphs, and lists keep indented nested blocks after a blank.
-**Phase 13** — CommonMark lazy continuation in the native
-split: unprefixed paragraph lines stay inside quotes and list items. **Phase 12** — CJK emphasis / Typora interop lock-in:
-`renderMarkdown` keeps Typora-shaped `**注意：**…` without numeric-escaping
-Chinese flanking. **Phase 11** — `sourceEditBetween` + `reparseFromText` so
-hosts with a prior split and a full next buffer can incremental-reparse without
-inventing ordinals. **Phase 10** — line-prefix offset alignment (0–3 leading ASCII spaces
-before a block marker → leading/gaps, micromark parity). **Phase 9** — table
-delimiter widening to vault three-dash style
-(`| --- | :--- | :---: | ---: |`) while keeping `tablePipeAlign: false`
-(content cells unpadded). **Phase 8** — serialize dialect verbatim runs
-(wiki links, alerts, footnotes, `[TOC]`, snake_case / metrics) and bare
-http(s) autolinks, matching Noto’s host handlers. **Phase 7** — hard-break
-(two trailing spaces) and list marker / ordered delimiter from `node.data`.
-**Phase 6** — micromark quarantined from the hot path; legacy entry
-`@roobli/md/legacy-micromark`. Phase 5 `serializeDocument` / hardened
-`joinSplit` implement Noto-aligned byte-exact saves. Phase 3 native scanner
-covers heading / paragraph / list / fenced code / **indented code** / quote /
-thematic / GFM tables / task lists / **display math** / **YAML frontmatter** /
-**HTML blocks** / **link + footnote definitions**.
-Synthetic medium/large A/B vs micromark (via legacy entry): native ~4.5 ms /
-~14.5 ms vs micromark ~304 ms / ~1.5 s (see
-[`docs/design/bench.md`](docs/design/bench.md)).
-**v0.1.19** — Phase 22 lazy empty-container / link-def title / ordered start≠1. **v0.1.18** — Phase 21 list-steal pipe-less `- | -` delimiters. **v0.1.17** — Phase 20 empty list item + blank + structural outside. **v0.1.16** — Phase 19 same-indent list marker/delimiter split. **v0.1.15** — Phase 18 `md serve` + symlink-escape harden. **v0.1.14** — GFM table header/delimiter column-count parity. **v0.1.13** — mixed-marker nested lists. **v0.1.12** — setext-`---` vs hr. **v0.1.11** — adjacent defs as block starts.
-**v0.1.10** — nest / interrupt parity. **v0.1.9** — lazy continuation.
-**v0.1.8** — CJK / Typora-shaped strong lock-in. **v0.1.7** —
-`sourceEditBetween` / `reparseFromText`. **v0.1.6** line-prefix offset
-alignment. **v0.1.5** table delimiter widening. **v0.1.4** verbatim runs + bare
-autolink. **v0.1.3** hard-break + list-marker; **v0.1.2** native indented-code;
-**v0.1.1** quote/callout split.
-Noto may pin `github:roobli/md#v0.1.19` when ready.
+`0.1.x`: in production as Noto's default engine since Noto
+`v0.0.2-alpha.112`. The API may still change before 1.0; every change is in
+the [changelog](CHANGELOG.md). Published to npm once the contract reaches v1;
+until then, install from a tag.
 
-See:
+On a synthetic corpus, the native scanner splits a medium document in about
+4.5 ms and a large one in about 14.5 ms, against about 304 ms and 1.5 s for
+micromark ([bench](docs/design/bench.md)).
 
-- [`docs/design/vision.md`](docs/design/vision.md) — product goal
-- [`docs/design/roadmap.md`](docs/design/roadmap.md) — phased plan
-- [`docs/design/bench.md`](docs/design/bench.md) — native vs micromark numbers
-- [`docs/design/typora-notes.md`](docs/design/typora-notes.md) — Typora study (interop research)
-- [`docs/design/noto-bridge.md`](docs/design/noto-bridge.md) — how this plugs into Noto v3
-- [`docs/design/contract-v0.md`](docs/design/contract-v0.md) — engine contract sketch
+Design notes: [vision](docs/design/vision.md) ·
+[roadmap](docs/design/roadmap.md) · [contract](docs/design/contract-v0.md) ·
+[Noto bridge](docs/design/noto-bridge.md) ·
+[Typora interop notes](docs/design/typora-notes.md)
 
 ## Install
 
 ```
-pnpm add github:roobli/md
+pnpm add github:roobli/md#v0.1.19
 ```
+
+Pin a tag: `main` moves. A host that runs install scripts may need to allow
+this package's `prepare` step, which builds `dist/` with `tsc`.
 
 ## Usage
 
@@ -124,23 +94,6 @@ node dist/serve/cli.js serve ./folder
 
 Defaults to `127.0.0.1:4321`. Optional `--port` / explicit `--host 0.0.0.0`.
 Root is pinned by the CLI argument; the UI cannot change it.
-
-## Breaking change (Phase 6)
-
-- Default entry **no longer** falls back to micromark. Documents outside the
-  Phase 1–5 native dialect are still scanned natively (best-effort kinds), not
-  bounced to micromark.
-- Direct dependencies on `micromark-extension-*` and `mdast-util-from-markdown`
-  moved to **`optionalDependencies`** (needed only for the legacy entry). The
-  default path still depends on `mdast-util-to-markdown` (+ GFM/math/frontmatter
-  / CJK to-markdown helpers) for `renderMarkdown` on edited blocks — those pull
-  some micromark-*util* packages transitively, but the **micromark parser is
-  not called** on open / reparse / serialize of pristine spans.
-- Compatibility import:
-
-```ts
-import { splitWithMicromark } from "@roobli/md/legacy-micromark";
-```
 
 ## Scripts
 
