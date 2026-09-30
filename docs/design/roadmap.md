@@ -313,3 +313,19 @@ Phase 21 **shipped** on `main` (v0.1.18).
 
 Phase 22 **shipped** on `main` (v0.1.19).
 
+## Phase 23 acceptance
+
+- [x] A reparse window is pinned at both edges (`src/window.ts`): it opens at the
+      start of an untouched block, and must close with the untouched block after
+      it, exactly as that block was; otherwise it reads on to the end of the text
+- [x] Frontmatter, the one block decided by unbounded lookahead, is refused by a
+      window that opens the note and stops short of its close
+- [x] `reparseBlocks` / `reparseFromText` match `parseBlocks` on generated edits,
+      including unclosed fences, math, comments and lazy continuation
+      (`reparse-window.test.ts`)
+- [x] `serializeDocument` returns the document `parseDocument(outputBytes)` would,
+      without a whole parse, on generated saves over LF, CRLF, BOM, no final
+      newline and no frontmatter (`serialize-incremental.test.ts`)
+- [x] Package `0.1.20`
+
+Phase 23 **shipped** on `main` (v0.1.20).

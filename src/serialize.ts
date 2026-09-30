@@ -10,8 +10,9 @@
 
 import { renderMarkdown } from './dialect.js';
 import { fromLf, toLf, type LineEnding } from './line-endings.js';
-import { parseDocument, parseSingleBlock } from './parse.js';
-import type { EngineDocument, EngineEnvelope } from './types.js';
+import { detectLineEnding, parseDocument, parseSingleBlock } from './parse.js';
+import type { BlockSpan, EngineDocument, EngineEnvelope } from './types.js';
+import { parseWindow } from './window.js';
 import type { RootContent } from 'mdast';
 
 const UTF8_BOM = Uint8Array.from([0xef, 0xbb, 0xbf]);
@@ -186,6 +187,127 @@ function gapBetween(
   };
 }
 
+/** Lone surrogates do not survive UTF-8: the output would read back differently. */
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+function isWellFormed(text: string): boolean {
+  const native = (text as { isWellFormed?: () => boolean }).isWellFormed;
+  return native ? native.call(text) : !LONE_SURROGATE.test(text);
+}
+
+/**
+ * The document `parseDocument(outputBytes)` would return, built without
+ * parsing all of it: every untouched block is moved to where it landed, and
+ * only the stretches around what changed are parsed again, each pinned at both
+ * edges (see `window.ts`). Null when a window does not hold, or the output is
+ * one this shortcut does not cover, and the caller parses the whole output.
+ *
+ * On an 8 MB note this is the difference between a full parse, about a
+ * hundred milliseconds, and parsing a handful of blocks.
+ */
+function nextDocument(
+  document: EngineDocument,
+  units: readonly SerializeUnit[],
+  pristine: readonly boolean[],
+  starts: readonly number[],
+  ends: readonly number[],
+  keptTrailing: boolean,
+  text: string,
+  bytes: Uint8Array,
+): EngineDocument | null {
+  const count = units.length;
+  const last = document.blocks.length - 1;
+  if (count === 0) return null;
+  // A leading U+FEFF would read back as a byte-order mark.
+  if (document.envelope.bom === 'none' && text.charCodeAt(0) === 0xfeff) return null;
+  for (let index = 0; index < count; index += 1) {
+    if (!pristine[index] && !isWellFormed(text.slice(starts[index]!, ends[index]!))) return null;
+  }
+
+  // Which units a window has to cover: every changed unit, both neighbours of
+  // a seam where blocks were deleted (two lists may now be one), and the ends
+  // of the note when its first or last block went or its last newline moved.
+  const inside = new Uint8Array(count);
+  for (let index = 0; index < count; index += 1) {
+    if (!pristine[index]) {
+      inside[index] = 1;
+      continue;
+    }
+    const ordinal = units[index]!.origin!;
+    if (index === 0 && ordinal !== 0) inside[index] = 1;
+    if (index === count - 1 && (ordinal !== last || !keptTrailing)) inside[index] = 1;
+    if (index > 0 && pristine[index - 1] && units[index - 1]!.origin !== ordinal - 1) {
+      inside[index - 1] = 1;
+      inside[index] = 1;
+    }
+  }
+
+  // Runs of covered units, each widened by one untouched unit on either side:
+  // the left one pins where the window starts, the right one is its anchor.
+  // Runs that would share an anchor are one window.
+  const windows: { first: number; last: number }[] = [];
+  for (let index = 0; index < count; index += 1) {
+    if (!inside[index]) continue;
+    let end = index;
+    while (end + 1 < count && inside[end + 1]) end += 1;
+    const first = Math.max(0, index - 1);
+    const lastUnit = Math.min(count - 1, end + 1);
+    const previous = windows.at(-1);
+    if (previous && first <= previous.last) previous.last = lastUnit;
+    else windows.push({ first, last: lastUnit });
+    index = end;
+  }
+
+  const blocks: BlockSpan[] = [];
+  let unit = 0;
+  for (const window of windows) {
+    for (; unit < window.first; unit += 1) blocks.push(moved(document, units[unit]!, starts[unit]!));
+    const from = window.first === 0 && inside[0] ? 0 : starts[window.first]!;
+    const closes = window.last === count - 1 && inside[count - 1];
+    const anchor = closes
+      ? null
+      : { kind: document.blocks[units[window.last]!.origin!]!.kind, start: starts[window.last]!, end: ends[window.last]! };
+    const spans = parseWindow(text, from, anchor ? anchor.end : text.length, anchor);
+    if (spans === null) return null;
+    for (const span of spans) blocks.push(span);
+    unit = window.last + 1;
+  }
+  for (; unit < count; unit += 1) blocks.push(moved(document, units[unit]!, starts[unit]!));
+
+  const gaps = new Array<string>(Math.max(0, blocks.length - 1));
+  for (let index = 0; index + 1 < blocks.length; index += 1) {
+    gaps[index] = text.slice(blocks[index]!.end, blocks[index + 1]!.start);
+  }
+  const first = blocks[0];
+  const final = blocks.at(-1);
+  return {
+    envelope: {
+      byteLength: bytes.byteLength,
+      bom: document.envelope.bom,
+      lineEnding: detectLineEnding(text),
+      hasFinalNewline: text.endsWith('\n'),
+    },
+    text,
+    blocks,
+    gaps,
+    leading: first ? text.slice(0, first.start) : '',
+    trailing: final ? text.slice(final.end) : text,
+  };
+}
+
+/** An untouched block where it landed in the output: same text, new offsets. */
+function moved(document: EngineDocument, unit: SerializeUnit, start: number): BlockSpan {
+  const block = document.blocks[unit.origin!]!;
+  if (block.start === start && block.node === null) return block;
+  return {
+    kind: block.kind,
+    start,
+    end: start + (block.end - block.start),
+    markdown: block.markdown,
+    node: null,
+  };
+}
+
 /**
  * Apply a block-mode save. Untouched spans are sliced from `document.text`.
  */
@@ -246,6 +368,10 @@ export function serializeDocument(
   }
 
   const pristine = units.map((unit) => isPristine(unit, document));
+  // Where each unit landed in the output, so the next document can be built
+  // without parsing all of it again.
+  const starts = new Array<number>(units.length);
+  const ends = new Array<number>(units.length);
 
   for (let index = 0; index < units.length; index += 1) {
     const unit = units[index]!;
@@ -265,12 +391,14 @@ export function serializeDocument(
       if (gap.preserved) keep(gap.preserved);
     }
 
+    starts[index] = cursor;
     if (pristine[index] && unit.origin !== null) {
       const block = document.blocks[unit.origin]!;
       // Byte-exact: slice original source, never re-stringify.
       const source = document.text.slice(block.start, block.end);
       emit(converting ? fromLf(toLf(source), lineEnding) : source);
       keep({ role: 'block', start: block.start, end: block.end });
+      ends[index] = cursor;
       continue;
     }
 
@@ -282,6 +410,7 @@ export function serializeDocument(
       return fail('MULTI_BLOCK_UNIT', 'Each editing unit must be exactly one markdown block.');
     }
     emit(fromLf(toLf(markdown), lineEnding));
+    ends[index] = cursor;
   }
 
   const lastUnit = units.at(-1);
@@ -289,12 +418,12 @@ export function serializeDocument(
     lastUnit?.origin === document.blocks.length - 1 && document.blocks.length > 0;
   const trailingUnchanged =
     !converting && hasFinalNewline === document.envelope.hasFinalNewline;
-  if (
+  const keptTrailing =
     endsAtLastBlock &&
-    pristine[units.length - 1] &&
+    pristine[units.length - 1] === true &&
     document.trailing.length > 0 &&
-    trailingUnchanged
-  ) {
+    trailingUnchanged;
+  if (keptTrailing) {
     const lastBlock = document.blocks[document.blocks.length - 1]!;
     emit(document.trailing);
     keep({
@@ -317,6 +446,19 @@ export function serializeDocument(
       text: outputText,
       outputBytes,
       document,
+      preserved,
+    };
+  }
+
+  const incremental = converting
+    ? null
+    : nextDocument(document, units, pristine, starts, ends, keptTrailing, outputText, outputBytes);
+  if (incremental !== null) {
+    return {
+      status: 'serialized',
+      text: outputText,
+      outputBytes,
+      document: incremental,
       preserved,
     };
   }

@@ -21,7 +21,10 @@ AGPL.
 - **Stable spans.** Every block carries its `start` and `end` in the source,
   its kind, and the literal gap before it.
 - **Local reparse.** `reparseBlocks` and `reparseFromText` rebuild only the
-  window around an edit; blocks outside it keep their identity.
+  window around an edit; blocks outside it keep their identity. The window is
+  pinned at both edges, so the result is always what a whole parse would say;
+  an edit that runs past it (an unclosed fence) is read on to the end.
+  `serializeDocument` builds its next document the same way.
 - **One dialect.** CommonMark plus GFM tables, task lists and strikethrough,
   `$`/`$$` math, YAML frontmatter, footnotes, callouts, wiki links and
   CJK-friendly emphasis. Behaviour is checked against micromark for parity.
@@ -45,7 +48,7 @@ Design notes: [vision](docs/design/vision.md) ·
 ## Install
 
 ```
-pnpm add github:roobli/md#v0.1.19
+pnpm add github:roobli/md#v0.1.20
 ```
 
 Pin a tag: `main` moves. A host that runs install scripts may need to allow
