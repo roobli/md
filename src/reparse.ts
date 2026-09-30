@@ -12,6 +12,7 @@
  */
 
 import { joinSplit, parseBlocks } from './parse.js';
+import { parseWindow } from './window.js';
 import type { BlockSpan, SplitDocument } from './types.js';
 
 /** Character edit against the prior joined source (`joinSplit(prior)`). */
@@ -202,34 +203,12 @@ function resolveDirtyOrdinals(
   return { from, to };
 }
 
-function priorWindow(
-  prior: SplitDocument,
-  priorText: string,
-  dirtyFrom: number,
-  dirtyTo: number,
-): { start: number; end: number } {
-  const n = prior.spans.length;
-  const start = dirtyFrom === 0 ? 0 : prior.spans[dirtyFrom - 1]!.end;
-  const end = dirtyTo === n - 1 ? priorText.length : prior.spans[dirtyTo + 1]!.start;
-  return { start, end };
-}
-
 function shiftSpan(span: BlockSpan, delta: number): BlockSpan {
   if (delta === 0) return span;
   return {
     kind: span.kind,
     start: span.start + delta,
     end: span.end + delta,
-    markdown: span.markdown,
-    node: span.node,
-  };
-}
-
-function remapLocalSpan(span: BlockSpan, windowStart: number): BlockSpan {
-  return {
-    kind: span.kind,
-    start: span.start + windowStart,
-    end: span.end + windowStart,
     markdown: span.markdown,
     node: span.node,
   };
@@ -311,34 +290,47 @@ export function reparseBlocks(options: ReparseBlocksOptions): ReparseBlocksResul
   const dirty = resolveDirtyOrdinals(prior, edit, replacedBlocks, slack);
   if (dirty === 'full' || prior.spans.length === 0) return finishFull();
 
-  const { from: dirtyFrom, to: dirtyTo } = dirty;
-  const window = priorWindow(prior, priorText, dirtyFrom, dirtyTo);
-
-  let windowStart: number;
-  let windowEnd: number;
-  if (edit) {
-    windowStart = mapPriorOffsetExclusiveEnd(window.start, edit);
-    windowEnd = mapPriorOffsetExclusiveEnd(window.end, edit);
-  } else {
-    // Block-ordinal path: host guarantees the change is confined to the dirty
-    // window, so prefix bytes are unchanged and suffix length is preserved.
-    windowStart = window.start;
-    windowEnd = text.length - (priorText.length - window.end);
-  }
-
-  if (windowStart < 0 || windowEnd < windowStart || windowEnd > text.length) {
-    return finishFull();
-  }
-
-  const slice = text.slice(windowStart, windowEnd);
-  const local = parseBlocks(slice);
-  const middle = local.spans.map((span) => remapLocalSpan(span, windowStart));
-
-  const prefix = prior.spans.slice(0, dirtyFrom) as BlockSpan[];
+  const n = prior.spans.length;
+  // Everything before the edit is where it was; everything after it moved by
+  // the same amount. On the block path the host vouches that the change sits
+  // inside the dirty ordinals.
   const delta = edit
     ? edit.inserted.length - (edit.priorEnd - edit.priorStart)
     : text.length - priorText.length;
-  const suffix = prior.spans.slice(dirtyTo + 1).map((span) => shiftSpan(span, delta));
+
+  // The window is pinned at both edges (see `window.ts`): it opens at the start
+  // of the untouched block before the dirty ordinals, and must close with the
+  // untouched block after them, exactly as that block was. If the edit ran on
+  // into it, as an unclosed fence does, the window is read on to the end of
+  // the text instead.
+  const leftOrdinal = dirty.from - 1;
+  const rightOrdinal = dirty.to + 1;
+  const left = leftOrdinal >= 0 ? prior.spans[leftOrdinal]! : null;
+  const right = rightOrdinal < n ? shiftSpan(prior.spans[rightOrdinal]!, delta) : null;
+  const windowStart = left ? left.start : 0;
+  if (
+    (left && text.slice(left.start, left.end) !== left.markdown)
+    || (right && (right.end > text.length || text.slice(right.start, right.end) !== right.markdown))
+  ) {
+    return finishFull();
+  }
+
+  let local = right ? parseWindow(text, windowStart, right.end, right) : null;
+  const anchored = local !== null;
+  if (local === null) local = parseWindow(text, windowStart, text.length, null);
+  if (local === null) return finishFull();
+  const windowEnd = anchored ? right!.end : text.length;
+
+  // The block before the window keeps its identity unless the edit changed how
+  // it ends (a line that now continues it, say).
+  const leftUnchanged = left !== null && local.length > 0
+    && local[0]!.start === left.start && local[0]!.end === left.end && local[0]!.kind === left.kind;
+  const dirtyFrom = leftUnchanged ? leftOrdinal + 1 : Math.max(0, leftOrdinal);
+  const dirtyTo = anchored ? rightOrdinal - 1 : n - 1;
+  const middle = local.slice(leftUnchanged ? 1 : 0, anchored ? -1 : undefined);
+
+  const prefix = prior.spans.slice(0, dirtyFrom) as BlockSpan[];
+  const suffix = anchored ? prior.spans.slice(rightOrdinal).map((span) => shiftSpan(span, delta)) : [];
 
   const spans: BlockSpan[] = [...prefix, ...middle, ...suffix];
   const stitched = stitchCoverage(text, spans, prior, dirtyFrom, dirtyTo, middle.length);

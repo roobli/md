@@ -7,6 +7,28 @@ change the API; each entry says so when it does.
 
 Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
 
+## [0.1.20] - 2026-09-30
+
+### Fixed
+- `reparseBlocks` and `reparseFromText` no longer cut a block short at the
+  edge of their window. An edit that opened a code fence, a display-math block
+  or an HTML comment without closing it was read as one short block followed
+  by the old blocks after it, where a whole parse has it run to the end of the
+  text. The window now has to end with the untouched block after it, exactly
+  as that block was; when it does not, the reparse reads on to the end. A line
+  that now continues the block before the window (lazy continuation) is also
+  picked up. (Phase 23.)
+
+### Changed
+- `serializeDocument` builds the next document from the blocks it moved and
+  small reparses around what changed, pinned the same way, instead of parsing
+  its whole output again. The document is the one `parseDocument` would
+  return, which the tests check on thousands of generated saves; the whole
+  parse remains as the fallback. On an 8 MB note a one-block save goes from
+  about 130-200 ms to 40-80 ms. (Phase 23.)
+- Line-ending detection uses two native scans instead of a character loop,
+  which took 20-35 ms of every parse of an 8 MB note.
+
 ## [0.1.19] - 2026-09-29
 
 ### Fixed
@@ -140,6 +162,7 @@ Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
   `@roobli/md/legacy-micromark`. (Phase 6; breaking for callers that relied
   on the fallback.)
 
+[0.1.20]: https://github.com/roobli/md/compare/v0.1.19...v0.1.20
 [0.1.19]: https://github.com/roobli/md/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/roobli/md/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/roobli/md/compare/v0.1.16...v0.1.17

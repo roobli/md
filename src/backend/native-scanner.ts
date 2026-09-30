@@ -514,8 +514,12 @@ function spansToSplit(text: string, raw: { kind: BlockKind; start: number; end: 
  * Native split for the Phase 1–5 dialect. Always returns a SplitDocument
  * (never null). Micromark is not consulted — see `@roobli/md/legacy-micromark`
  * for the Phase 0 compatibility backend.
+ *
+ * `atDocumentStart` is false when `text` is a window cut from the middle of a
+ * document: YAML frontmatter is only recognised at the very start of a file,
+ * so a `---` that opens a window is a thematic break there, not frontmatter.
  */
-export function tryNativeSplit(text: string): SplitDocument {
+export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocument {
   if (text.length === 0) {
     return { spans: [], leading: '', gaps: [], trailing: '' };
   }
@@ -532,7 +536,7 @@ export function tryNativeSplit(text: string): SplitDocument {
     }
 
     // YAML frontmatter (only at absolute document start)
-    if (i === 0 && line.start === 0 && isFrontmatterOpen(line.content, true)) {
+    if (atDocumentStart && i === 0 && line.start === 0 && isFrontmatterOpen(line.content, true)) {
       let j = i + 1;
       let closed = false;
       while (j < lines.length) {

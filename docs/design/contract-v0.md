@@ -84,11 +84,19 @@ only the dirty window (widened by `neighborSlack`), and stitches prefix /
 middle / suffix with absolute offsets. Untouched prefix spans keep object
 identity; untouched suffix spans keep `markdown` string identity. Micromark is not imported on this path (Phase 6); use `@roobli/md/legacy-micromark` for compat.
 
+The window is pinned at both edges (Phase 23, `src/window.ts`). It opens at the
+start of the untouched block before the dirty ordinals, which is re-read, so a
+line that now continues that block is picked up. It must close with the
+untouched block after them, exactly as that block was; if the edit ran on into
+it (an unclosed fence, display math or comment), the reparse reads on to the
+end of the text instead. The result is always what `parseBlocks` of the whole
+text would give; `neighborSlack` only trades window size for how often the
+fallback is needed, and is no longer what keeps the result correct.
+
 Noto call sites: `replaceMarkdown` can pass the differing middle ordinals as
 `replacedBlocks` instead of `splitBlocks(fullMarkdown)`; when the host only has
 the full next buffer, prefer `reparseFromText(prior, nextText)` (Phase 11).
-The single-block save path can use `neighborSlack: 0` after `parseSingleBlock`
-validation.
+`neighborSlack: 0` is safe on every path.
 
 ### Serialize (Phase 5)
 
@@ -224,6 +232,7 @@ Full table: [`roadmap.md`](./roadmap.md). Contract-facing summary:
 | **20** (done) | Empty list item + blank → structural outside |
 | **21** (done) | List-steal pipe-less delimiters not tables |
 | **22** (done) | Lazy only with open paragraph / link-def title / ordered start≠1 |
+| **23** (done) | Pinned reparse windows; `serializeDocument` without a whole-output parse |
 
 ## Replace boundary
 
