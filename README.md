@@ -31,8 +31,10 @@ AGPL.
 
 ## Status
 
-`0.1.x`: in production as Noto's default engine since Noto
-`v0.0.2-alpha.112`. The API may still change before 1.0; every change is in
+`0.1.x`: Noto's default engine since Noto `v0.0.2-alpha.112`, and its only
+one since the micromark fallback was removed
+([roobli/Noto#332](https://github.com/roobli/Noto/pull/332)). Noto `v0.0.3`
+ships `0.1.20`. The API may still change before 1.0; every change is in
 the [changelog](CHANGELOG.md). Published to npm once the contract reaches v1;
 until then, install from a tag.
 
