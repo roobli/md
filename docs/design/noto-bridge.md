@@ -88,23 +88,21 @@ parse. The remaining critical path **is** the full dialect parse.
 `@roobli/md` owns making that parse faster (incremental, lazier mdast, or a
 purpose-built block scanner) without breaking the bridge above.
 
-## Recommended next step (post Phase 11)
+## Status in Noto (October 2026)
 
-Adapter spike already lands in Noto (flagged). Host adoptions so far:
+Noto `v0.0.3` ships `@roobli/md` `0.1.20` as its only engine. Host adoptions,
+all in `roobli/Noto`:
 
-- **#81** — `replaceMarkdown` → prior-split cache + `reparseFromText`
-  (invalidate after typing): https://github.com/roobli/Noto/pull/81
-- **#82** — identity / single-block saves → flagged `serializeDocument`
-  (`toEngineDocument` / `toSerializeUnits`; multi-block + `source` mode stay
-  on Noto): https://github.com/roobli/Noto/pull/82
+- [#81](https://github.com/roobli/Noto/pull/81): `replaceMarkdown` uses a
+  prior-split cache and `reparseFromText`.
+- [#82](https://github.com/roobli/Noto/pull/82): identity and single-block
+  saves go through `serializeDocument`.
+- [#282](https://github.com/roobli/Noto/pull/282): `@roobli/md` became the
+  default (`v0.0.2-alpha.112`).
+- [#332](https://github.com/roobli/Noto/pull/332): the
+  `NOTO_MARKDOWN_ENGINE=micromark` switch and Noto's legacy split and
+  serialize were removed. Noto's save tests now re-parse the output instead
+  of comparing it with the old serializer. Noto still uses micromark and mdast
+  for dialect enrichment and `blockToMarkdown`.
 
-Remaining:
-
-1. Broaden flagged serialize to multi-block inserts/deletes; keep comparing
-   `outputBytes` against Noto's micromark path.
-2. Grow Noto option-B golden gates (`tests/fixtures/markdown-golden/` +
-   `markdown-golden-gates.test.ts`) before considering default-on; keep
-   `semanticKey`, branded IDs, sha256, and wire `nodes` in Noto until the
-   engine IR grows. Do **not** flip `NOTO_MARKDOWN_ENGINE` default yet.
-3. Open-path / `parseDocument` first measured cut still needs a design pass on
-   the Noto side (`docs/performance/measurements.md`).
+The *Serialize adoption steps* above are historical.
