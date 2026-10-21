@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { joinSplit } from '../parse.js';
 import { tryNativeSplit } from './native-scanner.js';
+import { splitWithMicromark } from './micromark-backend.js';
 
 /** Blank-line-naive splitter — the baseline Phase 1 must beat for fences. */
 function blankLineNaive(text: string): string[] {
@@ -315,6 +316,57 @@ describe('tryNativeSplit', () => {
     expect(emptyThenSplit.spans.map((s) => s.kind)).toEqual(['ordered-list', 'paragraph']);
     expect(emptyThenSplit.spans[0]!.markdown).toBe('1.');
     expect(emptyThenSplit.spans[1]!.markdown).toBe('para\n2. b');
+  });
+
+  it('ends lazy continuation after a heading, fence or nested quote', () => {
+    const cases: Array<[string, string[]]> = [
+      ['> # heading\nlazy\n', ['quote', 'paragraph']],
+      ['- # heading\nlazy\n', ['bullet-list', 'paragraph']],
+      ['> ```\n> x\nlazy\n', ['quote', 'paragraph']],
+      ['> > nested\nlazy\n', ['quote', 'paragraph']],
+    ];
+    for (const [text, kinds] of cases) {
+      const split = tryNativeSplit(text)!;
+      expect(joinSplit(split)).toBe(text);
+      expect(split.spans.map((s) => s.kind)).toEqual(kinds);
+    }
+
+    // A list item whose own content is a paragraph still continues lazily.
+    const listPara = '> - foo\nbar\n';
+    expect(tryNativeSplit(listPara)!.spans.map((s) => s.kind)).toEqual(['quote']);
+    const headingItem = '> - # h\nbar\n';
+    expect(tryNativeSplit(headingItem)!.spans.map((s) => s.kind)).toEqual(['quote', 'paragraph']);
+  });
+
+  it('keeps a link definition inside an open paragraph', () => {
+    const text = 'foo\n[bar]: /url\n';
+    const split = tryNativeSplit(text)!;
+    expect(joinSplit(split)).toBe(text);
+    expect(split.spans.map((s) => s.kind)).toEqual(['paragraph']);
+    expect(split.spans[0]!.markdown).toBe('foo\n[bar]: /url');
+
+    const footnote = 'foo\n[^1]: note\n';
+    const fnSplit = tryNativeSplit(footnote)!;
+    expect(joinSplit(fnSplit)).toBe(footnote);
+    expect(fnSplit.spans.map((s) => s.kind)).toEqual(['paragraph']);
+  });
+
+  it('agrees with micromark on the lazy-continuation and definition cases', () => {
+    const cases = [
+      '> # heading\nlazy\n',
+      '- # heading\nlazy\n',
+      '> ```\n> x\nlazy\n',
+      'foo\n[bar]: /url\n',
+      '> - # h\nbar\n',
+    ];
+    for (const text of cases) {
+      const native = tryNativeSplit(text)!;
+      const reference = splitWithMicromark(text);
+      expect(
+        native.spans.map((s) => [s.kind, s.markdown]),
+        text,
+      ).toEqual(reference.spans.map((s) => [s.kind, s.markdown]));
+    }
   });
 
   it('Phase 19: same-indent mixed bullet/delimiter opens a new list', () => {

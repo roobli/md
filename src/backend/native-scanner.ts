@@ -212,17 +212,6 @@ function isBlockQuote(content: string): boolean {
 }
 
 /**
- * True when a blockquote line has no non-whitespace content after the `>`
- * marker (and its optional following space). Used so lazy continuation only
- * runs while a paragraph is open inside the quote (Phase 22).
- */
-function isBlankBlockQuoteContent(content: string): boolean {
-  if (!isBlockQuote(content)) return false;
-  const stripped = content.replace(/^ {0,3}>[ \t]?/, '');
-  return /^\s*$/.test(stripped);
-}
-
-/**
  * CommonMark link-reference title occupying the whole line after indent:
  * `"..."`, `'...'`, or `(...)` (with backslash escapes).
  */
@@ -471,6 +460,44 @@ function isBlockStart(content: string): boolean {
   return false;
 }
 
+/** A link or footnote definition cannot interrupt an open paragraph. */
+function isBlockStartAfterParagraph(content: string): boolean {
+  if (definitionOpen(content)) return false;
+  return isBlockStart(content);
+}
+
+/** Content of a blockquote line after the marker and one optional space. */
+function blockQuoteContent(content: string): string {
+  return content.replace(/^ {0,3}>[ \t]?/, '');
+}
+
+/** Strip the leading list marker from an item line, if it has one. */
+function listItemContent(content: string): string {
+  const marker = orderedMarker(content) ?? bulletMarker(content);
+  return marker ? content.slice(marker[0].length) : content;
+}
+
+/**
+ * True when the line leaves a paragraph open at its end.
+ *
+ * Lazy continuation is only legal after a paragraph, not after a heading,
+ * fence, thematic break, definition or nested quote. A list item counts by
+ * its own content: `- foo` opens a paragraph, `- # h` does not, which is what
+ * CommonMark lets an unprefixed line continue.
+ */
+function opensParagraph(content: string): boolean {
+  let current = content;
+  if (isBlank(current)) return false;
+  // A nested quote's paragraph is not continued by an unprefixed outer line.
+  if (isBlockQuote(current)) return false;
+  while (isListItem(current)) {
+    current = listItemContent(current);
+    if (isBlank(current)) return false;
+  }
+  if (isIndentedCodeLine(current)) return false;
+  return !isBlockStart(current);
+}
+
 function trimTrailingNewlines(text: string, end: number): number {
   let cursor = end;
   while (cursor > 0) {
@@ -685,19 +712,35 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
     if (isBlockQuote(line.content)) {
       const start = spanStartAfterPrefix(line);
       // Phase 22: lazy unindented lines only while a paragraph is open inside
-      // the quote. Marker-only `>` / `> ` clears the open-paragraph flag
-      // (micromark: `>\npara` and `> a\n>\npara` put para outside).
-      let paragraphOpen = !isBlankBlockQuoteContent(line.content);
+      // the quote. A heading, fence, thematic break, definition or nested quote
+      // closes it; a list item counts by the paragraph inside it. Marker-only
+      // `>` / `> ` clears the flag (micromark: `>\npara` and `> a\n>\npara`
+      // put para outside).
+      const first = blockQuoteContent(line.content);
+      let fence = fenceOpen(first);
+      let paragraphOpen = fence === null && opensParagraph(first);
       let j = i + 1;
       while (j < lines.length) {
         const next = lines[j]!;
         if (isBlockQuote(next.content)) {
-          paragraphOpen = !isBlankBlockQuoteContent(next.content);
+          const inner = blockQuoteContent(next.content);
+          if (fence !== null) {
+            if (isFenceClose(inner, fence.marker, fence.length)) fence = null;
+            paragraphOpen = false;
+          } else {
+            const opened = fenceOpen(inner);
+            if (opened !== null) {
+              fence = opened;
+              paragraphOpen = false;
+            } else {
+              paragraphOpen = opensParagraph(inner);
+            }
+          }
           j += 1;
           continue;
         }
         if (isBlank(next.content)) break;
-        if (isBlockStart(next.content)) break;
+        if (isBlockStartAfterParagraph(next.content)) break;
         if (!paragraphOpen) break;
         j += 1;
       }
@@ -739,6 +782,8 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
       const openingMarker = (orderedMarker(line.content) ?? bulletMarker(line.content))!;
       let nestIndent = markerNestIndent(openingMarker);
       let lastItemEmpty = isMarkerOnlyListItem(line.content);
+      let fence = fenceOpen(listItemContent(line.content));
+      let paragraphOpen = fence === null && opensParagraph(line.content);
       // Phase 19: sibling items must keep the opening bullet / ordered delimiter.
       const listBullet = ordered ? null : (openingMarker[2] as string);
       const listDelimiter = ordered ? (openingMarker[3] as string) : null;
@@ -755,6 +800,8 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
           // Phase 16: indented mixed-marker nest stays in this span.
           if (!nested) return 'break';
           lastItemEmpty = false;
+          fence = fenceOpen(listItemContent(content));
+          paragraphOpen = fence === null && opensParagraph(content);
           return 'keep';
         }
         // Same-family: siblings (indent < nestIndent) may flip task-list and
@@ -776,6 +823,8 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
           // (micromark); top-level empty+blank gate uses sibling emptiness only.
           lastItemEmpty = false;
         }
+        fence = fenceOpen(listItemContent(content));
+        paragraphOpen = fence === null && opensParagraph(content);
         return 'keep';
       };
 
@@ -800,6 +849,9 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
           // empty item + blank + indented block → block is outside (micromark).
           if (indentOf(lines[k]!.content) >= 2) {
             if (lastItemEmpty) break;
+            const opened = fenceOpen(lines[k]!.content);
+            fence = opened;
+            paragraphOpen = opened === null && opensParagraph(lines[k]!.content);
             j = k;
             lastItemEmpty = false;
             continue;
@@ -807,6 +859,18 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
           break;
         }
         if (indentOf(next.content) >= 2) {
+          if (fence !== null) {
+            if (isFenceClose(next.content, fence.marker, fence.length)) fence = null;
+            paragraphOpen = false;
+          } else {
+            const opened = fenceOpen(next.content);
+            if (opened !== null) {
+              fence = opened;
+              paragraphOpen = false;
+            } else {
+              paragraphOpen = opensParagraph(next.content);
+            }
+          }
           j += 1;
           lastItemEmpty = false;
           continue;
@@ -815,8 +879,8 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
         // unindented lines that are not block starts stay in the list — but
         // only when the current item has opened a paragraph. Marker-only empty
         // items (`-` / `1.` / `- `) do not absorb unindented lazy text (Phase 22).
-        if (!isBlockStart(next.content)) {
-          if (lastItemEmpty) break;
+        if (!isBlockStartAfterParagraph(next.content)) {
+          if (lastItemEmpty || !paragraphOpen) break;
           j += 1;
           lastItemEmpty = false;
           continue;
@@ -875,7 +939,7 @@ export function tryNativeSplit(text: string, atDocumentStart = true): SplitDocum
           j = -1;
           break;
         }
-        if (isBlockStart(next.content)) {
+        if (isBlockStartAfterParagraph(next.content)) {
           // Phase 22: ordered list with start ≠ 1 does not interrupt a paragraph
           // (CommonMark / micromark); absorb into the paragraph instead.
           const ordered = orderedMarker(next.content);
