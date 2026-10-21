@@ -1,6 +1,6 @@
 {
   "name": "@roobli/md",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "WYSIWYG-first markdown engine for Noto — block-oriented, byte-exact friendly, fast on large vaults.",
   "license": "MIT",
   "type": "module",
@@ -58,6 +58,7 @@
   "optionalDependencies": {
     "mdast-util-from-markdown": "^2.0.2",
     "micromark-extension-cjk-friendly": "^1.2.3",
+    "micromark-extension-cjk-friendly-gfm-strikethrough": "1.2.3",
     "micromark-extension-frontmatter": "^2.0.0",
     "micromark-extension-gfm": "^3.0.0",
     "micromark-extension-math": "^3.1.0"
