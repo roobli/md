@@ -11,6 +11,7 @@ import { mathFromMarkdown } from 'mdast-util-math';
 import { frontmatterFromMarkdown } from 'mdast-util-frontmatter';
 import { gfm } from 'micromark-extension-gfm';
 import { cjkFriendlyExtension } from 'micromark-extension-cjk-friendly';
+import { gfmStrikethroughCjkFriendly } from 'micromark-extension-cjk-friendly-gfm-strikethrough';
 import { math } from 'micromark-extension-math';
 import { frontmatter } from 'micromark-extension-frontmatter';
 import type { List, Root, RootContent } from 'mdast';
@@ -20,6 +21,9 @@ import type { BlockSpan, SplitDocument } from '../types.js';
 const micromarkExtensions = [
   gfm({ singleTilde: false }),
   cjkFriendlyExtension(),
+  // `~~` takes the same CJK-friendly flanking amendment as `*` and `_`, so
+  // there is one dialect for every delimiter. Must come after `gfm()`.
+  gfmStrikethroughCjkFriendly({ singleTilde: false }),
   math({ singleDollarTextMath: true }),
   frontmatter(),
 ];

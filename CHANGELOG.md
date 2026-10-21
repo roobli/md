@@ -7,6 +7,17 @@ change the API; each entry says so when it does.
 
 Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
 
+## [0.1.21] - 2026-10-20
+
+### Changed
+- The legacy micromark backend (`@roobli/md/legacy-micromark`) reads `~~`
+  with the CJK-friendly flanking amendment
+  (`micromark-extension-cjk-friendly-gfm-strikethrough`, MIT, pinned 1.2.3 to
+  match the `micromark-extension-cjk-friendly` 1.x line already used here), the
+  same amendment it already applied to `*` and `_`. `中~~「删」~~文` and
+  `文~~:~~` are now struck. One dialect for every delimiter, matching Noto.
+  The default native hot path is unchanged.
+
 ## [0.1.20] - 2026-09-30
 
 ### Fixed
@@ -162,6 +173,7 @@ Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
   `@roobli/md/legacy-micromark`. (Phase 6; breaking for callers that relied
   on the fallback.)
 
+[0.1.21]: https://github.com/roobli/md/compare/v0.1.20...v0.1.21
 [0.1.20]: https://github.com/roobli/md/compare/v0.1.19...v0.1.20
 [0.1.19]: https://github.com/roobli/md/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/roobli/md/compare/v0.1.17...v0.1.18
