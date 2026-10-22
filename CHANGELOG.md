@@ -7,6 +7,18 @@ change the API; each entry says so when it does.
 
 Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
 
+## [0.1.22] - 2026-10-21
+
+### Fixed
+- Lazy continuation now ends after a heading, fenced code, thematic break or
+  nested quote inside a blockquote or list item. `> # heading` followed by an
+  unprefixed line is a quote plus a paragraph again, and so is `- # heading`.
+  A list item still counts by its own content: `> - foo` continues lazily,
+  `> - # h` does not.
+- A link or footnote definition no longer interrupts an open paragraph: `foo`
+  followed by `[bar]: /url` on the next line stays one paragraph. After a
+  blank line a definition still starts its own block.
+
 ## [0.1.21] - 2026-10-20
 
 ### Changed
