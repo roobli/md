@@ -7,6 +7,14 @@ change the API; each entry says so when it does.
 
 Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
 
+## [0.1.23] - 2026-10-21
+
+### Fixed
+- `> > nest` followed by an unprefixed line continues the nested paragraph
+  inside both quotes, matching micromark. `> > # h` still closes it. Caught by
+  Noto's `simple-no-marker-lazy-in-quotes.md` golden gate against the first
+  v0.1.22 build.
+
 ## [0.1.22] - 2026-10-21
 
 ### Fixed
