@@ -487,12 +487,19 @@ function listItemContent(content: string): string {
  */
 function opensParagraph(content: string): boolean {
   let current = content;
-  if (isBlank(current)) return false;
-  // A nested quote's paragraph is not continued by an unprefixed outer line.
-  if (isBlockQuote(current)) return false;
-  while (isListItem(current)) {
-    current = listItemContent(current);
+  // Strip quote and list markers in any order: `> > nest` continues through
+  // both quotes, while `> > # h` is a heading and closes the paragraph.
+  while (true) {
     if (isBlank(current)) return false;
+    if (isBlockQuote(current)) {
+      current = blockQuoteContent(current);
+      continue;
+    }
+    if (isListItem(current)) {
+      current = listItemContent(current);
+      continue;
+    }
+    break;
   }
   if (isIndentedCodeLine(current)) return false;
   return !isBlockStart(current);

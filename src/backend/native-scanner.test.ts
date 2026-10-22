@@ -323,7 +323,8 @@ describe('tryNativeSplit', () => {
       ['> # heading\nlazy\n', ['quote', 'paragraph']],
       ['- # heading\nlazy\n', ['bullet-list', 'paragraph']],
       ['> ```\n> x\nlazy\n', ['quote', 'paragraph']],
-      ['> > nested\nlazy\n', ['quote', 'paragraph']],
+      ['> > nest\nlazy\n', ['quote']],
+      ['> > # h\nlazy\n', ['quote', 'paragraph']],
     ];
     for (const [text, kinds] of cases) {
       const split = tryNativeSplit(text)!;
@@ -356,6 +357,7 @@ describe('tryNativeSplit', () => {
       '> # heading\nlazy\n',
       '- # heading\nlazy\n',
       '> ```\n> x\nlazy\n',
+      '> > nest\nlazy\n',
       'foo\n[bar]: /url\n',
       '> - # h\nbar\n',
     ];
