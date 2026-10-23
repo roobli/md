@@ -50,7 +50,7 @@ Design notes: [vision](docs/design/vision.md) ·
 ## Install
 
 ```
-pnpm add github:roobli/md#v0.1.20
+pnpm add github:roobli/md#v0.1.23
 ```
 
 Pin a tag: `main` moves. A host that runs install scripts may need to allow
