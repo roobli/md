@@ -7,6 +7,18 @@ change the API; each entry says so when it does.
 
 Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
 
+## [0.1.24] - 2026-11-03
+
+### Fixed
+- A line with a tab, a no-break space or an ideographic space (U+3000) before
+  `>` no longer hangs the parse. The quote test read `\s` and the quote strip
+  read a space, so the paragraph loop never advanced on such a line.
+- Block structure reads a space or a tab where CommonMark means one, as
+  micromark does: a line of ideographic spaces does not split a paragraph,
+  `#` followed by an ideographic space is not a heading, and blank lines,
+  setext underlines, thematic breaks, frontmatter delimiters and fence and
+  math closers no longer accept other whitespace.
+
 ## [0.1.23] - 2026-10-21
 
 ### Fixed
