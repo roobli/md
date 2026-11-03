@@ -112,7 +112,7 @@ function stripIndent(content: string, max = 3): string {
 }
 
 function isBlank(content: string): boolean {
-  return /^\s*$/.test(content);
+  return /^[ \t]*$/.test(content);
 }
 
 /** CommonMark indented code: ≥4 spaces (or a tab) of indent on a non-blank line. */
@@ -121,11 +121,11 @@ function isIndentedCodeLine(content: string): boolean {
 }
 
 function isAtxHeading(content: string): boolean {
-  return /^\s{0,3}#{1,6}(?:\s|$)/.test(content);
+  return /^ {0,3}#{1,6}(?:[ \t]|$)/.test(content);
 }
 
 function isSetextUnderline(content: string): boolean {
-  return /^\s{0,3}(?:=+|-+)\s*$/.test(content) && /[=-]/.test(content);
+  return /^ {0,3}(?:=+|-+)[ \t]*$/.test(content) && /[=-]/.test(content);
 }
 
 function fenceOpen(content: string): { marker: '`' | '~'; length: number } | null {
@@ -140,13 +140,13 @@ function fenceOpen(content: string): { marker: '`' | '~'; length: number } | nul
 }
 
 function isFenceClose(content: string, marker: '`' | '~', length: number): boolean {
-  const match = new RegExp(`^ {0,3}${marker}{${length},}\\s*$`).exec(content);
+  const match = new RegExp(`^ {0,3}${marker}{${length},}[ \\t]*$`).exec(content);
   return match !== null;
 }
 
 function isThematicBreak(content: string): boolean {
   const body = stripIndent(content);
-  if (!/^(\*|-|_)(?:\s*\1){2,}\s*$/.test(body)) return false;
+  if (!/^(\*|-|_)(?:[ \t]*\1){2,}[ \t]*$/.test(body)) return false;
   return true;
 }
 
@@ -208,7 +208,7 @@ function isListItem(content: string): boolean {
 }
 
 function isBlockQuote(content: string): boolean {
-  return /^\s{0,3}>/.test(content);
+  return /^ {0,3}>/.test(content);
 }
 
 /**
@@ -341,11 +341,11 @@ function isTableRow(content: string): boolean {
 
 /** YAML frontmatter open: exact `---` at byte offset 0. */
 function isFrontmatterOpen(content: string, absoluteStart: boolean): boolean {
-  return absoluteStart && /^---\s*$/.test(content);
+  return absoluteStart && /^---[ \t]*$/.test(content);
 }
 
 function isFrontmatterClose(content: string): boolean {
-  return /^---\s*$/.test(content);
+  return /^---[ \t]*$/.test(content);
 }
 
 /**
@@ -359,7 +359,7 @@ function displayMathOpen(content: string): { length: number } | null {
 }
 
 function isDisplayMathClose(content: string, length: number): boolean {
-  return new RegExp(`^ {0,3}\\${'$'}{${length},}\\s*$`).test(content);
+  return new RegExp(`^ {0,3}\\${'$'}{${length},}[ \\t]*$`).test(content);
 }
 
 /** CommonMark HTML block tag names (type 6). */
@@ -489,17 +489,17 @@ function opensParagraph(content: string): boolean {
   let current = content;
   // Strip quote and list markers in any order: `> > nest` continues through
   // both quotes, while `> > # h` is a heading and closes the paragraph.
+  // Every pass must strip something. A test and its strip that disagree on
+  // what a marker is (once, `\s` against a space before `>`) would otherwise
+  // spin here forever on a line such as a tab or an ideographic space before
+  // `>`, and freeze the host.
   while (true) {
     if (isBlank(current)) return false;
-    if (isBlockQuote(current)) {
-      current = blockQuoteContent(current);
-      continue;
-    }
-    if (isListItem(current)) {
-      current = listItemContent(current);
-      continue;
-    }
-    break;
+    let next = current;
+    if (isBlockQuote(current)) next = blockQuoteContent(current);
+    else if (isListItem(current)) next = listItemContent(current);
+    if (next === current) break;
+    current = next;
   }
   if (isIndentedCodeLine(current)) return false;
   return !isBlockStart(current);
