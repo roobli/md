@@ -109,3 +109,36 @@ describe('Phase 6 micromark quarantine', () => {
     expect(joinSplit(split)).toBe('# Hi\n\nBody\n');
   });
 });
+
+/*
+ * Whitespace that is not a space or a tab is not indentation. The scanner
+ * read `\s` in places CommonMark means space or tab, and in one of them the
+ * test for a quote marker and the code stripping it disagreed, so a line with
+ * a tab or an ideographic space before `>` sent the paragraph loop round
+ * forever. Full-width spaces are routine in Chinese notes.
+ */
+describe('whitespace that is not a space or a tab', () => {
+  const kindsOf = (text: string) => parseBlocks(text).spans.map((span) => span.kind);
+
+  it('parses a tab, a no-break space or an ideographic space before > without hanging', () => {
+    for (const text of ['\t> q', 'a\n\t> q\n', '- a\n\t> q\n', ' > q', '　> q\n', 'a\n　> q\n']) {
+      const split = parseBlocks(text);
+      expect(joinSplit(split)).toBe(text);
+    }
+  });
+
+  it('agrees with micromark on lines led by an ideographic space, a no-break space or a tab', async () => {
+    const { splitWithMicromark } = await import('./legacy-micromark.js');
+    for (const text of [
+      'a\n　\nb\n',
+      '#　title\n',
+      '　> q\n',
+      ' > q\n',
+      'a\n\t> q\n',
+      'para\n　　---\n',
+      '```\ncode\n```　\nafter\n',
+    ]) {
+      expect(kindsOf(text), JSON.stringify(text)).toEqual(splitWithMicromark(text).spans.map((span) => span.kind));
+    }
+  });
+});
