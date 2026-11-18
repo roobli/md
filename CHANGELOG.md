@@ -31,6 +31,8 @@ Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
   an optional second argument.
 - `md serve` reads `*` and `_` as emphasis only when they open before and close
   after a non-space, so `2 * 3 * 4` stays arithmetic.
+- `md serve` sends a Content-Security-Policy with its shell page that runs
+  only the page's own script.
 
 ## [0.1.24] - 2026-11-03
 
