@@ -32,10 +32,20 @@ function json(res: http.ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
-function text(res: http.ServerResponse, status: number, body: string, type: string): void {
+/*
+ * The shell page runs only its own script: no inline script, no event
+ * handler attribute, nothing from another origin. A note's preview is HTML
+ * built from untrusted text, and escaping it is the first defence; this is
+ * the second, so a mistake there cannot run anything. Inline styles stay,
+ * since the shell's sheet and a note's coloured words (`--note-*`) use them.
+ */
+const SHELL_POLICY = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
+
+function text(res: http.ServerResponse, status: number, body: string, type: string, policy?: string): void {
   res.writeHead(status, {
     'Content-Type': type,
     'Cache-Control': 'no-store',
+    ...(policy ? { 'Content-Security-Policy': policy } : {}),
   });
   res.end(body);
 }
@@ -97,7 +107,7 @@ export async function startServe(options: ServeOptions): Promise<ServeHandle> {
       const pathname = decodeURIComponent(url.pathname);
 
       if (pathname === '/' || pathname === '/index.html') {
-        text(res, 200, shellHtml(rootName), 'text/html; charset=utf-8');
+        text(res, 200, shellHtml(rootName), 'text/html; charset=utf-8', SHELL_POLICY);
         return;
       }
 

@@ -13,6 +13,8 @@ describe('heading slugs', () => {
 
   it('tells repeats apart with a suffix after the first', () => {
     expect(headingSlugs(texts)).toEqual(['b12-脚注', '九html', 'setup', 'setup-1']);
+    // A suffix never lands on a slug a heading already has, as in github-slugger.
+    expect(headingSlugs(['a', 'a-1', 'a', 'a'])).toEqual(['a', 'a-1', 'a-2', 'a-3']);
   });
 
   it('finds a heading by slug, encoded or not, then by its text as written', () => {

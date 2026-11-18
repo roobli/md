@@ -23,8 +23,11 @@ function escapeHtml(text: string): string {
  * never passed through. Every other tag is shown escaped.
  *
  * Built pieces are held out of the text as placeholders (a NUL, a number,
- * a NUL) while the patterns run, so a pattern never reads inside a code span
- * or a tag it did not write.
+ * a NUL) while the patterns run, so a pattern never reads inside a code span,
+ * a link or a tag it did not write. The note's own NULs are replaced first,
+ * so a note cannot forge one. A link is held whole, its target escaped as an
+ * attribute before any tag is read, so a tag written inside a link target is
+ * part of the target and can never become markup inside the attribute.
  */
 const HOLE = /\u0000(\d+)\u0000/g;
 const TAG = /<!--[\s\S]*?-->|<\/?[a-z][a-z0-9]*(?:\s[^<>]*)?>/gi;
@@ -95,17 +98,24 @@ function marksHtml(text: string, holes: Holes): string {
   return out + escapeHtml(text.slice(at));
 }
 
+const LINK = /\[([^\]]+)\]\(((?:https?:\/\/|mailto:|\/|#)[^)\s\u0000]+)\)/g;
+
 function inlineToHtml(text: string): string {
-  const holes = new Holes();
+  return inlineWith(text.replace(/\u0000/g, '\uFFFD'), new Holes(), true);
+}
+
+function inlineWith(text: string, holes: Holes, links: boolean): string {
   // Code spans first: nothing inside one is read.
   let s = text.replace(/`([^`\n]+)`/g, (_, code: string) => holes.hold(`<code>${escapeHtml(code)}</code>`));
+  // Then links, whole: the label is read as inline text of its own, the
+  // target only escaped.
+  if (links) {
+    s = s.replace(LINK, (_, label: string, href: string) =>
+      holes.hold(`<a href="${escapeHtml(href)}" rel="noopener noreferrer">${inlineWith(label, holes, false)}</a>`));
+  }
   const open: string[] = [];
   s = s.replace(TAG, (source) => holes.hold(tagHtml(source, open)));
   s = marksHtml(s, holes);
-  s = s.replace(
-    /\[([^\]]+)\]\(((?:https?:\/\/|mailto:|\/|#)[^)\s]+)\)/g,
-    '<a href="$2" rel="noopener noreferrer">$1</a>',
-  );
   // A delimiter opens only before a non-space and closes only after one, as
   // CommonMark has it, so `2 * 3 * 4` is arithmetic and `snake_case` a name.
   s = s.replace(/~~(?=\S)([^~\n]*?\S)~~/g, '<del>$1</del>');

@@ -6,7 +6,8 @@
  * heading in lower case with spaces as hyphens and every character dropped
  * that is not a letter, a digit, a mark, a hyphen, an underscore or a space;
  * CJK text is letters and stays. Two headings with one slug are told apart
- * with `-1`, `-2` after the first.
+ * with `-1`, `-2` after the first, skipping any a heading already has, as
+ * github-slugger does: `a`, `a-1`, `a` are `a`, `a-1`, `a-2`.
  */
 
 /** GitHub's slug for one heading's text. */
@@ -20,12 +21,17 @@ export function headingSlug(text: string): string {
 
 /** The slugs of a note's headings, in order, with GitHub's suffixes for repeats. */
 export function headingSlugs(texts: readonly string[]): string[] {
-  const seen = new Map<string, number>();
+  const occurrences = new Map<string, number>();
   return texts.map((text) => {
     const base = headingSlug(text);
-    const count = seen.get(base) ?? 0;
-    seen.set(base, count + 1);
-    return count === 0 ? base : `${base}-${count}`;
+    let slug = base;
+    while (occurrences.has(slug)) {
+      const count = occurrences.get(base)! + 1;
+      occurrences.set(base, count);
+      slug = `${base}-${count}`;
+    }
+    occurrences.set(slug, 0);
+    return slug;
   });
 }
 

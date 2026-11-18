@@ -113,6 +113,8 @@ describe('startServe smoke', () => {
 
       const shellRes = await fetch(handle.url);
       expect(shellRes.status).toBe(200);
+      // The page runs its own script only, so preview HTML can never run any.
+      expect(shellRes.headers.get('content-security-policy')).toContain("script-src 'self'");
       const html = await shellRes.text();
       expect(html).toContain('md serve');
       expect(html).toContain('只读');

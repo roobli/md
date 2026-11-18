@@ -72,6 +72,23 @@ describe('inline syntax Typora draws, read through @roobli/md/inline', () => {
     expect(out).toContain('<a href="#b12-\u811a\u6ce8"');
   });
 
+  it('keeps a tag written in a link target inside the target, and a forged placeholder out', () => {
+    for (const text of [
+      '[x](https://a.b/<abbr title="x onmouseover=alert(1) y">)\n',
+      '[x](https://a.b/\u00000\u0000) <abbr title="q onmouseover=alert(1)">t</abbr>\n',
+      '[x](https://a.b/`<b onmouseover=alert(1)>`)\n',
+    ]) {
+      const out = html(text);
+      const anchors = out.match(/<a [^>]*>/g) ?? [];
+      for (const anchor of anchors) expect(anchor).toMatch(/^<a href="[^"<>]*" rel="noopener noreferrer">$/);
+      expect(out).not.toContain('\u0000');
+    }
+  });
+
+  it('reads the label of a link as inline text', () => {
+    expect(html('[**bold** ==mark==](https://a.b)\n')).toContain('<a href="https://a.b" rel="noopener noreferrer"><strong>bold</strong> <mark>mark</mark></a>');
+  });
+
   it('keeps snake_case words and arithmetic as written', () => {
     const out = html('use snake_case_name and 2 * 3 * 4\n');
     expect(out).toContain('snake_case_name');
