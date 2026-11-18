@@ -7,6 +7,31 @@ change the API; each entry says so when it does.
 
 Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
 
+## [0.1.25] - 2026-11-18
+
+### Added
+- `@roobli/md/inline`, the readers for what Typora draws inside a line and
+  CommonMark does not, moved here from Noto so another host draws the same:
+  `typoraMarkRanges` (`==highlight==`, `^sup^`, `~sub~` with `\ ` escaped
+  spaces, and `:emoji:` given a name table), `openingTag` / `closingTag` /
+  `isInlineComment` for the inline HTML a note colours and sizes words with,
+  read through a closed list into `--note-*` custom properties, and
+  `headingSlug` / `headingSlugs` / `headingForFragment` for GitHub's heading
+  slugs. All additive; the root entry is unchanged.
+- `@roobli/md/emoji`: `EMOJI` and `emojiFor`, GitHub's 1913 shortcodes from
+  gemoji 8.1.0 (MIT), in its own entry so parsing never loads the table.
+
+### Changed
+- `md serve` draws highlights, sub- and superscripts, emoji, and the
+  whitelisted inline tags (`<span style>`, `<font>`, `<abbr>`, `<kbd>`, `<u>`
+  and the rest) from those readers. Every other tag is still shown escaped,
+  comments are hidden, and nothing is read inside a code span.
+- `md serve` gives each heading its GitHub slug as an `id`, so a
+  `[link](#heading)` in a note scrolls to it. `blockToHtml` takes the id as
+  an optional second argument.
+- `md serve` reads `*` and `_` as emphasis only when they open before and close
+  after a non-space, so `2 * 3 * 4` stays arithmetic.
+
 ## [0.1.24] - 2026-11-03
 
 ### Fixed
