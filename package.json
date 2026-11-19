@@ -2,7 +2,7 @@
   "name": "@roobli/md",
   "version": "0.1.25",
   "description": "WYSIWYG-first markdown engine for Noto — block-oriented, byte-exact friendly, fast on large vaults.",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
   "author": "roobli",

@@ -9,8 +9,8 @@ source instead of re-serializing it. It is the engine under
 [Noto](https://github.com/roobli/Noto), and it has no dependency on any editor
 or UI.
 
-MIT licensed, so a host that is not Noto can use it without taking on Noto's
-AGPL.
+AGPL-3.0-only, as Noto and `@roobli/vault` are. Releases up to 0.1.24 were
+published under MIT and stay available under it.
 
 ## What it guarantees
 
@@ -141,4 +141,7 @@ pnpm bench:ab # synthetic medium/large native vs @roobli/md/legacy-micromark
 
 ## License
 
-MIT © roobli
+AGPL-3.0-only, as Noto is. See [LICENSE](LICENSE). A host that includes
+this package and is distributed, or a modified version offered to people over
+a network, offers its source under the same license. Versions 0.1.24 and
+earlier were released under MIT, and those releases keep that license.

@@ -22,6 +22,8 @@ Phases refer to [`docs/design/roadmap.md`](docs/design/roadmap.md).
   gemoji 8.1.0 (MIT), in its own entry so parsing never loads the table.
 
 ### Changed
+- The license is now AGPL-3.0-only, as Noto's and `@roobli/vault`'s are.
+  Versions 0.1.24 and earlier were released under MIT and keep it.
 - `md serve` draws highlights, sub- and superscripts, emoji, and the
   whitelisted inline tags (`<span style>`, `<font>`, `<abbr>`, `<kbd>`, `<u>`
   and the rest) from those readers. Every other tag is still shown escaped,
