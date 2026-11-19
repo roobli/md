@@ -50,7 +50,7 @@ describe('previewFile', () => {
     if ('error' in result) return;
     expect(result.kind).toBe('markdown');
     if (result.kind === 'markdown') {
-      expect(result.html).toContain('<h1>Fixture README</h1>');
+      expect(result.html).toContain('<h1 id="fixture-readme">Fixture README</h1>');
       expect(result.html).toContain('<strong>md serve</strong>');
     }
   });
@@ -109,10 +109,12 @@ describe('startServe smoke', () => {
       expect(fileRes.status).toBe(200);
       const file = (await fileRes.json()) as { kind: string; html?: string };
       expect(file.kind).toBe('markdown');
-      expect(file.html).toContain('<h1>Fixture README</h1>');
+      expect(file.html).toContain('<h1 id="fixture-readme">Fixture README</h1>');
 
       const shellRes = await fetch(handle.url);
       expect(shellRes.status).toBe(200);
+      // The page runs its own script only, so preview HTML can never run any.
+      expect(shellRes.headers.get('content-security-policy')).toContain("script-src 'self'");
       const html = await shellRes.text();
       expect(html).toContain('md serve');
       expect(html).toContain('只读');

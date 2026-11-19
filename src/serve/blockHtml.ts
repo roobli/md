@@ -1,5 +1,9 @@
 import type { BlockKind } from '../kinds.js';
 import type { BlockSpan } from '../types.js';
+import { emojiFor } from '../inline/emoji-names.js';
+import { ALL_MARK_KINDS, typoraMarkRanges } from '../inline/marks.js';
+import { headingSlugs } from '../inline/slug.js';
+import { closingTag, isInlineComment, openingTag } from '../inline/tag.js';
 
 function escapeHtml(text: string): string {
   return text
@@ -9,37 +13,134 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/**
- * Lightweight inline markdown → HTML for read-only serve preview.
- * Ported from Noto.docs dogfood (`blockHtml.ts`). Not a full CommonMark
- * inline parser — primary path stays parseBlocks → spansToHtml.
+/*
+ * Inline markdown to HTML for the read-only preview. Not a full CommonMark
+ * inline parser: code spans, links, bold, italic and strikethrough are read
+ * by pattern, as before. What Typora draws and CommonMark does not comes
+ * from `@roobli/md/inline`, the same readers Noto's editor draws from:
+ * `==highlight==`, `^sup^`, `~sub~`, `:emoji:`, and the inline HTML a note
+ * colours or sizes its words with, which is read through a closed list and
+ * never passed through. Every other tag is shown escaped.
+ *
+ * Built pieces are held out of the text as placeholders (a NUL, a number,
+ * a NUL) while the patterns run, so a pattern never reads inside a code span,
+ * a link or a tag it did not write. The note's own NULs are replaced first,
+ * so a note cannot forge one. A link is held whole, its target escaped as an
+ * attribute before any tag is read, so a tag written inside a link target is
+ * part of the target and can never become markup inside the attribute.
  */
+const HOLE = /\u0000(\d+)\u0000/g;
+const TAG = /<!--[\s\S]*?-->|<\/?[a-z][a-z0-9]*(?:\s[^<>]*)?>/gi;
+
+class Holes {
+  private readonly pieces: string[] = [];
+  hold(html: string): string {
+    this.pieces.push(html);
+    return `\u0000${this.pieces.length - 1}\u0000`;
+  }
+  fill(text: string): string {
+    return text.replace(HOLE, (_, index: string) => this.pieces[Number(index)] ?? '');
+  }
+}
+
+/** A tag a note wrote, as the HTML the preview draws, kept balanced. */
+function tagHtml(source: string, open: string[]): string {
+  if (isInlineComment(source)) return '';
+  const closing = closingTag(source);
+  if (closing !== null) {
+    // A closing tag with nothing it closes, `</font>` included (drawn as a
+    // span), is shown as written.
+    const drawn = closing === 'font' ? 'span' : closing;
+    const at = open.lastIndexOf(drawn);
+    if (at < 0) return escapeHtml(source);
+    return open.splice(at).reverse().map((name) => (name === 'a' ? '' : `</${name}>`)).join('');
+  }
+  const tag = openingTag(source);
+  if (tag === null) return escapeHtml(source);
+  // `<a id>` is an anchor and draws nothing; `<font>` is drawn as a span.
+  if (tag.name === 'a') {
+    open.push('a');
+    return `<a id="${escapeHtml(tag.anchor ?? '')}"></a>`;
+  }
+  const name = tag.name === 'font' ? 'span' : tag.name;
+  const attributes = [
+    tag.style ? ` class="rmd-styled" style="${escapeHtml(tag.style)}"` : '',
+    tag.title ? ` title="${escapeHtml(tag.title)}"` : '',
+    tag.anchor ? ` id="${escapeHtml(tag.anchor)}"` : '',
+  ].join('');
+  open.push(name);
+  return `<${name}${attributes}>`;
+}
+
+const MARK_TAG = { highlight: 'mark', superscript: 'sup', subscript: 'sub' } as const;
+
+/** Typora's marks and emoji over a run of raw text, the rest escaped. */
+function marksHtml(text: string, holes: Holes): string {
+  let out = '';
+  let at = 0;
+  for (const range of typoraMarkRanges(text, ALL_MARK_KINDS, emojiFor)) {
+    out += escapeHtml(text.slice(at, range.from));
+    if (range.kind === 'emoji') {
+      out += holes.hold(`<span class="rmd-emoji" title="${escapeHtml(text.slice(range.from, range.to))}">${range.emoji ?? ''}</span>`);
+    } else {
+      const tag = MARK_TAG[range.kind];
+      let inner = '';
+      let from = range.innerFrom;
+      for (const escape of range.escapes) {
+        inner += text.slice(from, escape);
+        from = escape + 1;
+      }
+      inner += text.slice(from, range.innerTo);
+      out += `${holes.hold(`<${tag}>`)}${escapeHtml(inner)}${holes.hold(`</${tag}>`)}`;
+    }
+    at = range.to;
+  }
+  return out + escapeHtml(text.slice(at));
+}
+
+const LINK = /\[([^\]]+)\]\(((?:https?:\/\/|mailto:|\/|#)[^)\s\u0000]+)\)/g;
+
 function inlineToHtml(text: string): string {
-  let s = escapeHtml(text);
-  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-  s = s.replace(
-    /\[([^\]]+)\]\(((?:https?:\/\/|mailto:|\/|#)[^)\s]+)\)/g,
-    '<a href="$2" rel="noopener noreferrer">$1</a>',
-  );
-  s = s.replace(/~~([^~\n]+?)~~/g, '<del>$1</del>');
-  s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
-  s = s.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
-  s = s.replace(/(?<!_)_([^_\n]+?)_(?!_)/g, '<em>$1</em>');
-  return s;
+  return inlineWith(text.replace(/\u0000/g, '\uFFFD'), new Holes(), true);
+}
+
+function inlineWith(text: string, holes: Holes, links: boolean): string {
+  // Code spans first: nothing inside one is read.
+  let s = text.replace(/`([^`\n]+)`/g, (_, code: string) => holes.hold(`<code>${escapeHtml(code)}</code>`));
+  // Then links, whole: the label is read as inline text of its own, the
+  // target only escaped.
+  if (links) {
+    s = s.replace(LINK, (_, label: string, href: string) =>
+      holes.hold(`<a href="${escapeHtml(href)}" rel="noopener noreferrer">${inlineWith(label, holes, false)}</a>`));
+  }
+  const open: string[] = [];
+  s = s.replace(TAG, (source) => holes.hold(tagHtml(source, open)));
+  s = marksHtml(s, holes);
+  // A delimiter opens only before a non-space and closes only after one, as
+  // CommonMark has it, so `2 * 3 * 4` is arithmetic and `snake_case` a name.
+  s = s.replace(/~~(?=\S)([^~\n]*?\S)~~/g, '<del>$1</del>');
+  s = s.replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(?<!\*)\*(?=[^\s*])([^*\n]*?[^\s*])?\*(?!\*)/g, (match, inner: string | undefined) => (inner === undefined ? match : `<em>${inner}</em>`));
+  s = s.replace(/(?<![_\w])_(?=\S)([^_\n]*?\S)_(?![_\w])/g, '<em>$1</em>');
+  // A tag the line opened and never closed ends with the line.
+  return holes.fill(s) + open.reverse().map((name) => (name === 'a' ? '' : `</${name}>`)).join('');
 }
 
 function trimTrailingNewline(s: string): string {
   return s.endsWith('\n') ? s.slice(0, -1) : s;
 }
 
-function headingHtml(markdown: string): string {
-  const m = markdown.match(/^(#{1,6})\s+(.*)$/s);
-  if (!m || m[1] === undefined || m[2] === undefined) {
-    return `<p>${inlineToHtml(trimTrailingNewline(markdown))}</p>`;
-  }
-  const level = m[1].length;
-  const body = trimTrailingNewline(m[2]).replace(/\s+#+\s*$/, '');
-  return `<h${level}>${inlineToHtml(body)}</h${level}>`;
+function headingParts(markdown: string): { level: number; body: string } | null {
+  const m = markdown.match(/^ {0,3}(#{1,6})\s+(.*)$/s);
+  if (!m || m[1] === undefined || m[2] === undefined) return null;
+  return { level: m[1].length, body: trimTrailingNewline(m[2]).replace(/\s+#+\s*$/, '').trim() };
+}
+
+function headingHtml(markdown: string, id?: string): string {
+  const parts = headingParts(markdown);
+  if (!parts) return `<p>${inlineToHtml(trimTrailingNewline(markdown))}</p>`;
+  const anchor = id ? ` id="${escapeHtml(id)}"` : '';
+  return `<h${parts.level}${anchor}>${inlineToHtml(parts.body)}</h${parts.level}>`;
 }
 
 function paragraphHtml(markdown: string): string {
@@ -178,11 +279,12 @@ function defHtml(kind: 'footnote-definition' | 'link-definition', markdown: stri
   return `<p class="rmd-def rmd-${kind}">${inlineToHtml(trimTrailingNewline(markdown))}</p>`;
 }
 
-export function blockToHtml(span: BlockSpan): string {
+/** One block as HTML; a heading takes `id` when the caller has its slug. */
+export function blockToHtml(span: BlockSpan, id?: string): string {
   const { kind, markdown } = span;
   switch (kind) {
     case 'heading':
-      return headingHtml(markdown);
+      return headingHtml(markdown, id);
     case 'paragraph':
       return paragraphHtml(markdown);
     case 'bullet-list':
@@ -213,6 +315,13 @@ export function blockToHtml(span: BlockSpan): string {
   }
 }
 
+/**
+ * A document's blocks as HTML, each heading with GitHub's slug as its id, so
+ * a `[link](#heading)` in the note lands where it does on GitHub and Typora.
+ */
 export function spansToHtml(spans: readonly BlockSpan[]): string {
-  return spans.map(blockToHtml).join('\n');
+  const headings = spans.filter((span) => span.kind === 'heading');
+  const slugs = headingSlugs(headings.map((span) => headingParts(span.markdown)?.body ?? ''));
+  const ids = new Map(headings.map((span, index) => [span, slugs[index]]));
+  return spans.map((span) => blockToHtml(span, ids.get(span))).join('\n');
 }

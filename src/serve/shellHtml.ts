@@ -114,6 +114,17 @@ export function shellHtml(rootName: string): string {
   article.md hr.rmd-hr { border: 0; border-top: 1px solid var(--line); margin: 1.5em 0; }
   article.md .rmd-task { list-style: none; margin-left: -1.1em; }
   article.md .rmd-task input { margin-right: 6px; }
+  article.md mark { background: #f3e3a6; color: inherit; padding: 0 .1em; border-radius: 2px; }
+  article.md kbd {
+    font-family: var(--font-mono); font-size: .8em; padding: .05em .4em;
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--paper);
+  }
+  article.md abbr[title] { text-decoration: underline dotted; cursor: help; }
+  article.md .rmd-styled {
+    color: var(--note-color, inherit); background: var(--note-fill, transparent);
+    font-size: var(--note-size, inherit); font-weight: var(--note-weight, inherit);
+    font-style: var(--note-slant, inherit); text-decoration-line: var(--note-line, inherit);
+  }
   .code-wrap { padding: 0; }
   pre.source {
     margin: 0; min-height: 100%; padding: 20px 24px 48px;

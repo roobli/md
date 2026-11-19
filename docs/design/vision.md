@@ -10,7 +10,7 @@ files for the open path Noto wants, and it was never designed as a
 source spans, and cheap incremental reparse — habits Typora trained users on.
 
 `@roobli/md` owns that core under the same roof as `@roobli/canvas`: a small
-public MIT package Noto (and later other hosts) can depend on.
+public package, AGPL-3.0-only as Noto is, that Noto (and later other hosts) can depend on.
 
 ## Product goals
 

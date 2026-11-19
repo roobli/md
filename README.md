@@ -9,8 +9,8 @@ source instead of re-serializing it. It is the engine under
 [Noto](https://github.com/roobli/Noto), and it has no dependency on any editor
 or UI.
 
-MIT licensed, so a host that is not Noto can use it without taking on Noto's
-AGPL.
+AGPL-3.0-only, as Noto and `@roobli/vault` are. Releases up to 0.1.24 were
+published under MIT and stay available under it.
 
 ## What it guarantees
 
@@ -50,7 +50,7 @@ Design notes: [vision](docs/design/vision.md) ·
 ## Install
 
 ```
-pnpm add github:roobli/md#v0.1.24
+pnpm add github:roobli/md#v0.1.25
 ```
 
 Pin a tag: `main` moves. A host that runs install scripts may need to allow
@@ -85,11 +85,42 @@ if (doc.status === "parsed") {
 ```
 
 
+## Inline readers (`@roobli/md/inline`)
+
+The block engine leaves a paragraph's text as written. What Typora draws
+inside a line and CommonMark does not is read by small pure functions, so an
+editor and a renderer draw it alike. Noto draws its decorations from them and
+`md serve` its HTML.
+
+```ts
+import { typoraMarkRanges, ALL_MARK_KINDS, openingTag, headingSlugs } from "@roobli/md/inline";
+import { emojiFor } from "@roobli/md/emoji";
+
+typoraMarkRanges("H~2~O is ==water== :droplet:", ALL_MARK_KINDS, emojiFor);
+// subscript, highlight and emoji ranges, with inner offsets and escapes
+
+openingTag('<span style="color:red; position:fixed">');
+// { name: "span", style: "--note-color: red", title: null, anchor: null }
+
+headingSlugs(["B12 脚注", "Setup", "Setup"]); // ["b12-脚注", "setup", "setup-1"]
+```
+
+`typoraMarkRanges` finds `==highlight==`, `^sup^`, `~sub~` (with `\ ` as the one
+space a sub- or superscript may hold) and `:shortcode:` emoji. `openingTag`,
+`closingTag` and `isInlineComment` read the inline HTML a note colours or
+sizes its words with through a closed list of tags and properties, and hand
+what survives back as `--note-*` CSS custom properties; nothing positions,
+hides or loads. `headingSlug`, `headingSlugs` and `headingForFragment` spell
+and find a heading the way a `#fragment` link names it on GitHub and Typora.
+The emoji table (gemoji 8.1.0, 1913 names) is its own entry,
+`@roobli/md/emoji`, so a host that only parses never loads it.
+
 ## Local folder browser (`md serve`)
 
 Thin **read-only** localhost HTTP UI for a directory. Markdown preview uses
-`parseBlocks` → IR → HTML (same dogfood path as Noto.docs). Not Noto Electron,
-not holt, not a collab surface.
+`parseBlocks` → IR → HTML (same dogfood path as Noto.docs), with the inline
+readers above, and gives each heading its slug as an id so in-note links land.
+Not Noto Electron, not holt, not a collab surface.
 
 ```
 pnpm build
@@ -110,4 +141,7 @@ pnpm bench:ab # synthetic medium/large native vs @roobli/md/legacy-micromark
 
 ## License
 
-MIT © roobli
+AGPL-3.0-only, as Noto is. See [LICENSE](LICENSE). A host that includes
+this package and is distributed, or a modified version offered to people over
+a network, offers its source under the same license. Versions 0.1.24 and
+earlier were released under MIT, and those releases keep that license.

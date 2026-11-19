@@ -29,6 +29,7 @@ and only then quarantine micromark from the hot path (done in Phase 6).
 | **20** | **Done** | Marker-only empty list items (`-` / `1.` at EOL) are lists; empty item + blank + indented structural stays **outside** the list (micromark); mid-list empty siblings stay one span; tight empty+structural stays inside. |
 | **21** | **Done** | Micromark **list-steal** pipe-less delimiters: `- | -` / indented / `1. | ---` are not tables (`countDelimiterCells` refuses `isListItem`); leading-`|` and compact `-|-` stay tables. |
 | **22** | **Done** | Lazy continuation only with an **open paragraph**: empty quotes / marker-only empty list items do not absorb unindented lazy lines; complete **link-definitions** absorb at most one indented title line; ordered lists with **start ≠ 1** do not interrupt paragraphs (CommonMark / micromark). Footnote lazy (Phase 14) unchanged. |
+| **23** | **Done** | Inline readers as pure functions, `@roobli/md/inline` + `@roobli/md/emoji`: Typora marks (`==`/`^`/`~`, escaped spaces), emoji shortcodes, the inline HTML tag whitelist (`--note-*` custom properties), GitHub heading slugs. Moved from Noto's renderer; `md serve` draws its inline HTML and heading ids from them. |
 
 ## Phase 1 acceptance (this slice)
 
@@ -62,7 +63,7 @@ Phase 3 **shipped** on `main`. Phase 6 moved micromark behind `@roobli/md/legacy
 - **Whole-doc micromark fallback (Phase 6)**: removed from `parseBlocks`. Compat lives at `@roobli/md/legacy-micromark`.
 - **Indented code**: **native** (`indented-code`) with exact offsets; internal blanks between indented chunks stay one span; does not interrupt paragraphs (CommonMark). Shipped post–Phase 6 in v0.1.2.
 - **Line-prefix offsets**: **aligned** (Phase 10) — up to three leading ASCII spaces before a block marker go to leading/gaps, matching micromark; html / indented-code / frontmatter keep opening bytes.
-- **CJK emphasis / `semanticKey`**: block split is kind+offset only; **serialize** CJK flanking locked in Phase 12 (`renderMarkdown`). Inline parse / `semanticKey` remains a host / IR concern.
+- **CJK emphasis / `semanticKey`**: block split is kind+offset only; **serialize** CJK flanking locked in Phase 12 (`renderMarkdown`). Inline parse into a tree / `semanticKey` remains a host / IR concern; the readers for Typora's inline extensions are pure functions in `@roobli/md/inline` (Phase 23), which a host calls over its own text runs.
 - **Phase 4 done**: `reparseBlocks` stitches local native reparses; see contract.
 - **Phase 5 done**: `serializeDocument` / hardened `joinSplit`; see contract.
 
